@@ -81,7 +81,7 @@ def evaluate(model, loader):
     return correct / len(loader.dataset)
 
 # ── 5. Run training ───────────────────────────────────────────────────
-EPOCHS = 10
+EPOCHS = 50
 train_accs, test_accs = [], []
 
 print("Training VictimCNN on MNIST...")
