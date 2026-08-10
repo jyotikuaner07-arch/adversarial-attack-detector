@@ -1,0 +1,14 @@
+DEFENCE EVALUATION RESULTS
+Baseline (clean, no attack): 99.0%
+
+Defence                       FGSM      PGD   DeepFool
+-------------------------------------------------------
+No defence (raw attack)      22.4%     0.0%       0.0%
+JPEG q=75                    17.5%     0.0%      99.0%
+JPEG q=60                    20.5%     0.0%      99.0%
+JPEG q=50                    22.0%     0.0%      99.0%
+Bit-depth 4-bit              19.5%     0.0%      63.5%
+Bit-depth 5-bit              18.5%     0.0%      63.5%
+Bit-depth 6-bit              18.0%     0.0%      54.5%
+Gaussian σ=0.5               35.0%     0.0%      97.5%
+Gaussian σ=1.0               64.5%    42.5%      97.5%

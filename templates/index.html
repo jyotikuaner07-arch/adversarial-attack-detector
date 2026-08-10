@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdverSense — Adversarial Attack Detector</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container { max-width: 700px; margin: 0 auto; }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 2rem; }
+    .header h1 { font-size: 2rem; color: #60a5fa; margin-bottom: 0.5rem; }
+    .header p  { color: #94a3b8; font-size: 0.95rem; }
+
+    /* Upload card */
+    .card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .upload-area {
+      border: 2px dashed #475569;
+      border-radius: 8px;
+      padding: 2.5rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      margin-bottom: 1rem;
+    }
+    .upload-area:hover { border-color: #60a5fa; }
+    .upload-area p { color: #94a3b8; margin-bottom: 0.5rem; }
+    .upload-area small { color: #64748b; font-size: 0.8rem; }
+
+    #preview {
+      max-width: 140px;
+      max-height: 140px;
+      border-radius: 8px;
+      margin-top: 1rem;
+      display: none;
+      border: 2px solid #475569;
+      image-rendering: pixelated;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 0.85rem;
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover   { background: #1d4ed8; }
+    .btn:disabled{ background: #475569; cursor: not-allowed; }
+
+    /* Result card */
+    #result-card { display: none; }
+
+    .verdict {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1.25rem;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+    .verdict.adversarial { background: #450a0a; border: 1px solid #dc2626; color: #fca5a5; }
+    .verdict.clean       { background: #052e16; border: 1px solid #16a34a; color: #86efac; }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .result-item {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+    }
+    .result-item .label {
+      font-size: 0.75rem;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .result-item .value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .result-item .sub {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .defence-box {
+      background: #1c1917;
+      border: 1px solid #78350f;
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+    }
+    .defence-box .label { font-size: 0.75rem; color: #92400e; text-transform: uppercase; margin-bottom: 6px; }
+    .defence-box .defended-digit { font-size: 1.4rem; font-weight: 700; color: #fbbf24; }
+    .defence-box .defence-method { font-size: 0.8rem; color: #a16207; margin-top: 4px; }
+
+    /* Confidence bar */
+    .conf-bar-wrap { margin-top: 6px; }
+    .conf-bar-bg { background: #1e293b; border-radius: 4px; height: 6px; }
+    .conf-bar-fill { height: 6px; border-radius: 4px; background: #3b82f6; transition: width 0.5s; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 1.5rem; color: #94a3b8; }
+
+    /* Footer */
+    .footer { text-align: center; margin-top: 2rem; color: #475569; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>🛡 AdverSense</h1>
+    <p>AI-Powered Adversarial Attack Detector — Final Year Project</p>
+    <p style="margin-top:4px; font-size:0.8rem; color:#475569;">
+      Upload an MNIST digit image to detect adversarial attacks
+    </p>
+  </div>
+
+  <!-- Upload card -->
+  <div class="card">
+    <div class="upload-area" onclick="document.getElementById('file-input').click()">
+      <p>📁 Click to upload an image</p>
+      <small>PNG, JPG — MNIST digit (28×28 recommended)</small>
+      <br>
+      <img id="preview" alt="preview">
+    </div>
+    <input type="file" id="file-input" accept="image/*"
+           style="display:none" onchange="handleFile(this)">
+    <button class="btn" onclick="analyse()" id="analyse-btn">
+      Analyse Image
+    </button>
+  </div>
+
+  <!-- Result card -->
+  <div class="card" id="result-card">
+    <div id="result-content"></div>
+  </div>
+
+  <div class="footer">
+    AdverSense · AI Security Project · P P Savani University · 2026
+  </div>
+
+</div>
+
+<script>
+  let selectedFile = null;
+
+  function handleFile(input) {
+    selectedFile = input.files[0];
+    if (!selectedFile) return;
+    const img = document.getElementById('preview');
+    img.src = URL.createObjectURL(selectedFile);
+    img.style.display = 'block';
+  }
+
+  async function analyse() {
+    if (!selectedFile) {
+      alert('Please select an image first.');
+      return;
+    }
+
+    const btn = document.getElementById('analyse-btn');
+    const resultCard = document.getElementById('result-card');
+    const resultContent = document.getElementById('result-content');
+
+    btn.disabled = true;
+    btn.textContent = 'Analysing...';
+    resultCard.style.display = 'block';
+    resultContent.innerHTML = '<div class="loading">⏳ Running detection pipeline...</div>';
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+
+    try {
+      const res  = await fetch('/analyse', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      if (data.error) {
+        resultContent.innerHTML = `<div class="loading" style="color:#f87171">❌ Error: ${data.error}</div>`;
+        return;
+      }
+
+      const isAdv = data.is_adversarial;
+
+      let html = `
+        <div class="verdict ${isAdv ? 'adversarial' : 'clean'}">
+          ${isAdv ? '⚠️ ADVERSARIAL ATTACK DETECTED' : '✅ CLEAN IMAGE — No Attack Detected'}
+        </div>
+
+        <div class="result-grid">
+          <div class="result-item">
+            <div class="label">Predicted Digit</div>
+            <div class="value">${data.original_class}</div>
+            <div class="sub">Original classification</div>
+            <div class="conf-bar-wrap">
+              <div class="conf-bar-bg">
+                <div class="conf-bar-fill" style="width:${data.original_confidence}%"></div>
+              </div>
+            </div>
+          </div>
+          <div class="result-item">
+            <div class="label">Confidence</div>
+            <div class="value">${data.original_confidence}%</div>
+            <div class="sub">Model certainty</div>
+          </div>
+          <div class="result-item">
+            <div class="label">Detection Result</div>
+            <div class="value" style="font-size:1rem; color:${isAdv ? '#f87171' : '#4ade80'}">
+              ${isAdv ? 'Adversarial' : 'Clean'}
+            </div>
+            <div class="sub">DetectorCNN verdict</div>
+          </div>
+          <div class="result-item">
+            <div class="label">Detection Confidence</div>
+            <div class="value">${data.detect_confidence}%</div>
+            <div class="sub">Detector certainty</div>
+          </div>
+        </div>
+      `;
+
+      if (isAdv && data.defended_class !== null) {
+        html += `
+          <div class="defence-box">
+            <div class="label">🛡 After Defence (${data.defence_applied})</div>
+            <div class="defended-digit">
+              Corrected digit: ${data.defended_class}
+              <span style="font-size:1rem; font-weight:400">
+                (${data.defended_confidence}% confidence)
+              </span>
+            </div>
+            <div class="defence-method">
+              Adversarial noise stripped via JPEG compression before classification
+            </div>
+          </div>
+        `;
+      }
+
+      resultContent.innerHTML = html;
+
+    } catch (err) {
+      resultContent.innerHTML =
+        `<div class="loading" style="color:#f87171">❌ Server error: ${err.message}</div>`;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Analyse Image';
+    }
+  }
+</script>
+</body>
+</html>
