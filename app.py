@@ -36,11 +36,26 @@ NORMALISE = transforms.Normalize((0.1307,), (0.3081,))
 MNIST_CLASSES = ['0','1','2','3','4','5','6','7','8','9']
 
 def preprocess_image(file_bytes):
-    """Convert uploaded image bytes to a 28x28 greyscale tensor."""
-    pil = Image.open(io.BytesIO(file_bytes)).convert('L')  # greyscale
-    pil = pil.resize((28, 28))                             # MNIST size
-    tensor = transforms.ToTensor()(pil)                    # [1, 28, 28]
-    return tensor.unsqueeze(0)                             # [1, 1, 28, 28]
+    """
+    Convert uploaded image to 28x28 MNIST-format tensor.
+    Handles both black-background and white-background images.
+    """
+    import numpy as np
+
+    pil = Image.open(io.BytesIO(file_bytes)).convert('L')
+    pil = pil.resize((28, 28), Image.LANCZOS)
+    img_np = np.array(pil).astype(np.float32)
+
+    # MNIST format = white digit on BLACK background
+    # If image is mostly white background → invert it
+    if img_np.mean() > 127:
+        img_np = 255 - img_np
+
+    # Normalise to 0-1
+    img_np = img_np / 255.0
+
+    tensor = torch.tensor(img_np).unsqueeze(0).unsqueeze(0).float()
+    return tensor  # [1, 1, 28, 28]                             # [1, 1, 28, 28]
 
 def jpeg_defence(tensor_img, quality=75):
     """Strip adversarial noise using JPEG compression."""
