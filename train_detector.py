@@ -4,10 +4,11 @@ import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
 from torch.utils.data import DataLoader, TensorDataset
-from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import sys
+import json
 
 # Import VictimCNN device setting from Phase 1
 from train_classifier import device
@@ -42,42 +43,47 @@ class DetectorCNN(nn.Module):
 
 # ── Only runs when directly executed ──────────────────────────────────
 if __name__ == '__main__':
+    from sklearn.metrics import classification_report
     print(f"Using device: {device}")
     os.makedirs('models',  exist_ok=True)
     os.makedirs('results', exist_ok=True)
 
-    # ── 2. Load clean images ──────────────────────────────────────────
-    # We use the same 500 test images that were attacked in Phase 2.
-    # These are CLEAN (label = 0).
+    # ── 2. Load clean test images ─────────────────────────────────────
     transform = transforms.ToTensor()
     test_data = torchvision.datasets.MNIST(
         './data', train=False, download=False, transform=transform)
 
-    clean_images = torch.stack(
-        [test_data[i][0] for i in range(500)])  # shape: [500, 1, 28, 28]
+    # ── 3. Load successful adversarial images from Phase 2 ───────────
+    adv_path = 'attacks/detector_adv_success.pt'
+    if not os.path.exists(adv_path):
+        print("❌ ERROR: attacks/detector_adv_success.pt is missing.")
+        sys.exit("run generate_attacks.py first")
 
-    # ── 3. Load adversarial images from Phase 2 ───────────────────────
-    # FGSM images used for TRAINING the detector (label = 1)
-    # PGD and DeepFool used ONLY for transfer detection testing
-    fgsm_adv = torch.load('attacks/FGSM_adv_images.pt')    # [500, 1, 28, 28]
-    pgd_adv  = torch.load('attacks/PGD_adv_images.pt')     # [500, 1, 28, 28]
-    df_adv   = torch.load('attacks/DeepFool_adv_images.pt')# [500, 1, 28, 28]
-    print("✅ Loaded clean and adversarial images")
+    adv_images = torch.load(adv_path)
+    num_adv = len(adv_images)
+    print(f"✅ Loaded {num_adv} successful adversarial images from {adv_path}")
 
-    # ── 4. Build training dataset ─────────────────────────────────────
-    # 500 clean (label=0) + 500 FGSM adversarial (label=1) = 1000 total
-    # The detector is ONLY trained on FGSM — not PGD or DeepFool.
-    # That's intentional — transfer detection tests if it can catch
-    # attacks it was never trained on.
-    X_all = torch.cat([clean_images, fgsm_adv])       # [1000, 1, 28, 28]
+    if num_adv == 0:
+        print("❌ ERROR: attacks/detector_adv_success.pt contains 0 samples.")
+        sys.exit("run generate_attacks.py first")
+
+    # Optional for transfer evaluation: load PGD and DeepFool bulk tensors if present
+    pgd_adv = torch.load('attacks/PGD_adv_images.pt') if os.path.exists('attacks/PGD_adv_images.pt') else None
+    df_adv  = torch.load('attacks/DeepFool_adv_images.pt') if os.path.exists('attacks/DeepFool_adv_images.pt') else None
+
+    # ── 4. Build balanced training dataset ────────────────────────────
+    # Balanced: exactly N clean MNIST vs N successful adv (unnormalized [0, 1])
+    clean_subset = torch.stack([test_data[i % len(test_data)][0] for i in range(num_adv)])
+    X_all = torch.cat([clean_subset, adv_images])
     y_all = torch.cat([
-        torch.zeros(500),   # 500 clean  → label 0
-        torch.ones(500)     # 500 FGSM   → label 1
+        torch.zeros(num_adv),   # clean  → label 0
+        torch.ones(num_adv)     # adversarial → label 1
     ]).long()
 
     # Shuffle and split 80% train / 20% validation
-    idx     = torch.randperm(1000)
-    split   = int(0.8 * 1000)  # 800 train, 200 validation
+    total_samples = len(X_all)
+    idx = torch.randperm(total_samples)
+    split = int(0.8 * total_samples)
 
     X_train = X_all[idx[:split]]
     y_train = y_all[idx[:split]]
@@ -89,20 +95,22 @@ if __name__ == '__main__':
     val_loader = DataLoader(
         TensorDataset(X_val, y_val), batch_size=64, shuffle=False)
 
-    print(f"✅ Dataset: {len(X_train)} train, {len(X_val)} validation")
-    print(f"   Training on: 500 clean + 500 FGSM adversarial images")
+    print(f"✅ Balanced Dataset: {len(X_train)} train, {len(X_val)} validation ({num_adv} clean + {num_adv} adv)")
 
     # ── 5. Setup model, loss, optimiser ──────────────────────────────
     detector  = DetectorCNN().to(device)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(detector.parameters(), lr=0.001)
 
-    # ── 6. Training loop ──────────────────────────────────────────────
-    EPOCHS = 100
+    # ── 6. Training loop with early stopping ─────────────────────────
+    EPOCHS = 30
+    PATIENCE = 8
+    patience_count = 0
+    best_val_acc = 0.0
+    best_val_loss = float('inf')
     train_accs, val_accs = [], []
-    best_val_acc = 0
 
-    print(f"\nTraining DetectorCNN for {EPOCHS} epochs...")
+    print(f"\nTraining DetectorCNN for up to {EPOCHS} epochs (patience={PATIENCE})...")
     print("-" * 55)
 
     for epoch in range(1, EPOCHS + 1):
@@ -124,28 +132,39 @@ if __name__ == '__main__':
         # Validation phase
         detector.eval()
         val_correct, val_total = 0, 0
+        val_loss = 0.0
         with torch.no_grad():
             for X, y in val_loader:
                 X, y = X.to(device), y.to(device)
                 out  = detector(X)
+                loss = criterion(out, y)
                 val_correct += (out.argmax(1) == y).sum().item()
                 val_total   += len(y)
+                val_loss    += loss.item() * len(y)
         val_acc = val_correct / val_total * 100
+        val_loss = val_loss / val_total
 
         train_accs.append(train_acc)
         val_accs.append(val_acc)
 
         # Save best model
-        if val_acc > best_val_acc:
+        if val_acc > best_val_acc or (val_acc == best_val_acc and val_loss < best_val_loss):
             best_val_acc = val_acc
+            best_val_loss = val_loss
             torch.save(detector.state_dict(), 'models/detector_cnn.pth')
             saved = "✅ saved"
+            patience_count = 0
         else:
-            saved = ""
+            patience_count += 1
+            saved = f"(no improve {patience_count}/{PATIENCE})"
 
         print(f"Epoch {epoch:2d}/{EPOCHS} | "
               f"Train: {train_acc:.1f}% | "
-              f"Val: {val_acc:.1f}% {saved}")
+              f"Val: {val_acc:.1f}% (loss: {val_loss:.4f}) {saved}")
+
+        if patience_count >= PATIENCE:
+            print(f"\n🛑 Early stopping at epoch {epoch} (best val acc: {best_val_acc:.1f}%)")
+            break
 
     print(f"\nBest validation accuracy: {best_val_acc:.1f}%")
     print("✅ Detector saved to models/detector_cnn.pth")
@@ -184,8 +203,13 @@ if __name__ == '__main__':
     print("="*55)
 
     transfer_results = {}
+    transfer_candidates = []
+    if pgd_adv is not None:
+        transfer_candidates.append(('PGD', pgd_adv))
+    if df_adv is not None:
+        transfer_candidates.append(('DeepFool', df_adv))
 
-    for attack_name, adv_imgs in [('PGD', pgd_adv), ('DeepFool', df_adv)]:
+    for attack_name, adv_imgs in transfer_candidates:
         # All adversarial → label should be 1
         adv_labels  = torch.ones(len(adv_imgs)).long()
         adv_loader  = DataLoader(
@@ -209,11 +233,36 @@ if __name__ == '__main__':
         print(f"  (detector correctly flagged {correct}/{len(adv_imgs)} "
               f"{attack_name} images as adversarial)")
 
-    # ── 9. Also test on clean images ──────────────────────────────────
+    # Recall on DeepFool successful subset if available
+    df_succ_recall = None
+    if os.path.exists('attacks/DeepFool_index.json') and os.path.exists('attacks/DeepFool_adv_images.pt'):
+        try:
+            with open('attacks/DeepFool_index.json', 'r') as f_df:
+                df_idx_data = json.load(f_df)
+            df_succ_indices = [item['index'] for item in df_idx_data if item.get('success')]
+            if df_succ_indices:
+                df_bulk = torch.load('attacks/DeepFool_adv_images.pt')
+                df_succ_imgs = torch.stack([df_bulk[i] for i in df_succ_indices])
+                df_succ_labels = torch.ones(len(df_succ_imgs)).long()
+                df_succ_loader = DataLoader(TensorDataset(df_succ_imgs, df_succ_labels), batch_size=64)
+                df_succ_correct = 0
+                with torch.no_grad():
+                    for X, y in df_succ_loader:
+                        X = X.to(device)
+                        preds = detector(X).argmax(1).cpu()
+                        df_succ_correct += (preds == y).sum().item()
+                df_succ_recall = df_succ_correct / len(df_succ_imgs) * 100
+                print(f"\n  🎯 DeepFool Successful Subset Recall: {df_succ_recall:.1f}% "
+                      f"({df_succ_correct}/{len(df_succ_imgs)} correctly flagged as adversarial)")
+        except Exception as e:
+            print(f"  (DeepFool successful subset evaluation skipped: {e})")
+
+    # ── 9. Also test on 200 clean images ──────────────────────────────
     # False positive rate: how often does detector wrongly flag clean images?
-    clean_labels = torch.zeros(500).long()
+    clean_eval = torch.stack([test_data[i][0] for i in range(200)])
+    clean_labels = torch.zeros(len(clean_eval)).long()
     clean_loader = DataLoader(
-        TensorDataset(clean_images, clean_labels),
+        TensorDataset(clean_eval, clean_labels),
         batch_size=64
     )
     clean_correct = 0
@@ -222,29 +271,38 @@ if __name__ == '__main__':
             X = X.to(device)
             preds = detector(X).argmax(1).cpu()
             clean_correct += (preds == y).sum().item()
-    clean_acc = clean_correct / 500 * 100
-    false_pos  = 100 - clean_acc
+    clean_acc = clean_correct / len(clean_eval) * 100
+    false_pos = 100.0 - clean_acc
 
-    print(f"\n  Clean image accuracy: {clean_acc:.1f}%")
+    print(f"\n  Clean image accuracy (200 test images): {clean_acc:.1f}%")
     print(f"  False positive rate:  {false_pos:.1f}% "
           f"(clean images wrongly flagged as adversarial)")
+    if false_pos > 15.0:
+        print(f"  ⚠️ HARD WARNING: False Positive Rate ({false_pos:.1f}%) exceeds 15%!")
+    else:
+        print(f"  ✅ False Positive Rate is within acceptable threshold ({false_pos:.1f}% <= 15%)")
 
     # ── 10. Final summary ─────────────────────────────────────────────
     print("\n" + "="*55)
     print("📊 FINAL DETECTOR SUMMARY")
     print("="*55)
-    print(f"  Trained on:              FGSM (500 images)")
+    print(f"  Trained on:              {num_adv} clean + {num_adv} successful adv images")
     print(f"  Validation accuracy:     {best_val_acc:.1f}%")
-    print(f"  PGD transfer detection:  {transfer_results['PGD']:.1f}%")
-    print(f"  DeepFool transfer:       {transfer_results['DeepFool']:.1f}%")
-    print(f"  False positive rate:     {false_pos:.1f}%")
+    if 'PGD' in transfer_results:
+        print(f"  PGD transfer detection:  {transfer_results['PGD']:.1f}%")
+    if 'DeepFool' in transfer_results:
+        print(f"  DeepFool transfer:       {transfer_results['DeepFool']:.1f}%")
+    if df_succ_recall is not None:
+        print(f"  DeepFool success recall: {df_succ_recall:.1f}%")
+    print(f"  Clean FPR (200 images):  {false_pos:.1f}%")
     print("="*55)
 
     # ── 11. Save training curve ───────────────────────────────────────
     plt.figure(figsize=(8, 5))
-    plt.plot(range(1, EPOCHS+1), train_accs,
+    epochs_run = len(train_accs)
+    plt.plot(range(1, epochs_run + 1), train_accs,
              label='Train Accuracy', linewidth=2)
-    plt.plot(range(1, EPOCHS+1), val_accs,
+    plt.plot(range(1, epochs_run + 1), val_accs,
              label='Validation Accuracy', linewidth=2, linestyle='--')
     plt.axhline(y=best_val_acc, color='green', linestyle=':',
                 label=f'Best Val: {best_val_acc:.1f}%')

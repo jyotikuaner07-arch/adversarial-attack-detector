@@ -1,0 +1,7 @@
+{
+  "attack": "PGD",
+  "eps": 0.3,
+  "true": 4,
+  "adv_pred": 8,
+  "index": 497
+}

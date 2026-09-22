@@ -1,284 +1,1139 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AdverSense — Adversarial Attack Detector</title>
+  <title>AdverSense</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #e2e8f0;
-      min-height: 100vh;
-      padding: 2rem 1rem;
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
-    .container { max-width: 700px; margin: 0 auto; }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background: #f2f2f0;
+      color: #111;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
 
-    /* Header */
-    .header { text-align: center; margin-bottom: 2rem; }
-    .header h1 { font-size: 2rem; color: #60a5fa; margin-bottom: 0.5rem; }
-    .header p  { color: #94a3b8; font-size: 0.95rem; }
+    /* TOP BAR */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 2rem 2rem 0;
+      flex-wrap: wrap;
+    }
 
-    /* Upload card */
-    .card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 1.5rem;
+    .tb-pill {
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 99px;
+      padding: 7px 18px;
+      font-size: 13px;
+      color: #333;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .tb-btn {
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 99px;
+      padding: 8px 20px;
+      font-size: 13px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .tb-btn:hover {
+      background: #333;
+    }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      padding: 3.5rem 2rem 2.5rem;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .hero h1 {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: clamp(2rem, 5vw, 4rem);
+      font-weight: 900;
+      line-height: 1.0;
+      letter-spacing: -0.04em;
+      color: #111;
       margin-bottom: 1.5rem;
     }
 
-    .upload-area {
-      border: 2px dashed #475569;
-      border-radius: 8px;
-      padding: 2.5rem 1rem;
+    .hero p {
+      font-size: 0.95rem;
+      color: #777;
+      line-height: 1.7;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+
+    /* UPLOAD CARD */
+    .card-wrap {
+      max-width: 780px;
+      margin: 2rem auto;
+      padding: 0 2rem;
+    }
+
+    .ucard {
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 18px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      overflow: hidden;
+    }
+
+    .drop-area {
+      padding: 2.5rem 2rem;
       text-align: center;
       cursor: pointer;
-      transition: border-color 0.2s;
-      margin-bottom: 1rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      transition: background 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
     }
-    .upload-area:hover { border-color: #60a5fa; }
-    .upload-area p { color: #94a3b8; margin-bottom: 0.5rem; }
-    .upload-area small { color: #64748b; font-size: 0.8rem; }
 
-    #preview {
-      max-width: 140px;
-      max-height: 140px;
-      border-radius: 8px;
-      margin-top: 1rem;
+    .drop-area:hover,
+    .drop-area.over {
+      background: rgba(255, 255, 255, 0.65);
+    }
+
+    .drop-area .ico {
+      font-size: 1.9rem;
+      display: block;
+      margin-bottom: 0.6rem;
+    }
+
+    .drop-area .dt {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 0.3rem;
+    }
+
+    .drop-area .ds {
+      font-size: 11.5px;
+      color: #aaa;
+    }
+
+    #pw {
       display: none;
-      border: 2px solid #475569;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    #pw img {
+      width: 78px;
+      height: 78px;
+      border-radius: 10px;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      object-fit: cover;
       image-rendering: pixelated;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
-    .btn {
-      width: 100%;
-      padding: 0.85rem;
-      background: #2563eb;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 600;
+    #fn {
+      font-size: 11px;
+      color: #aaa;
+      margin-top: 5px;
+    }
+
+    input[type=file] {
+      display: none;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.2rem;
+    }
+
+    .cf-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cf-icon {
+      width: 30px;
+      height: 30px;
+      background: rgba(0, 0, 0, 0.06);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.15s;
     }
-    .btn:hover   { background: #1d4ed8; }
-    .btn:disabled{ background: #475569; cursor: not-allowed; }
 
-    /* Result card */
-    #result-card { display: none; }
+    .cf-icon:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
 
+    .swatch {
+      width: 20px;
+      height: 20px;
+      background: #7c5cbf;
+      border-radius: 5px;
+    }
+
+    .cf-btn {
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 99px;
+      padding: 7px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .cf-btn:hover {
+      background: #333;
+    }
+
+    .cf-btn:disabled {
+      background: #aaa;
+      cursor: default;
+    }
+
+    /* RESULT AREA */
+    #rs {
+      display: none;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 1.4rem 1.5rem;
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 14px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      font-size: 13px;
+      color: #777;
+    }
+
+    .spin {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0, 0, 0, 0.1);
+      border-top-color: #111;
+      border-radius: 50%;
+      animation: sp 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes sp {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .rcard {
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+      padding: 1.5rem;
+    }
+
+    /* VERDICT STYLES — 3 types */
     .verdict {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 1rem;
-      border-radius: 8px;
-      margin-bottom: 1.25rem;
-      font-weight: 600;
-      font-size: 1.1rem;
+      gap: 10px;
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      border: 1.5px solid;
+      letter-spacing: 0.02em;
     }
-    .verdict.adversarial { background: #450a0a; border: 1px solid #dc2626; color: #fca5a5; }
-    .verdict.clean       { background: #052e16; border: 1px solid #16a34a; color: #86efac; }
 
-    .result-grid {
+    /* Clean */
+    .v-clean {
+      background: rgba(22, 163, 74, 0.07);
+      border-color: rgba(22, 163, 74, 0.25);
+      color: #15803d;
+    }
+
+    /* Adversarial */
+    .v-adv {
+      background: rgba(220, 38, 38, 0.07);
+      border-color: rgba(220, 38, 38, 0.25);
+      color: #dc2626;
+    }
+
+    /* Suspicious / non-MNIST */
+    .v-warn {
+      background: rgba(234, 179, 8, 0.07);
+      border-color: rgba(234, 179, 8, 0.35);
+      color: #a16207;
+    }
+
+    /* Emergency blink for adversarial */
+    @keyframes em {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+      }
+
+      50% {
+        box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.2);
+      }
+    }
+
+    @keyframes em2 {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    .blink {
+      animation: em 0.85s ease-in-out infinite;
+    }
+
+    .blink .vt {
+      animation: em2 0.85s ease-in-out infinite;
+    }
+
+    /* STAT GRID */
+    .sgrid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-bottom: 1rem;
     }
 
-    .result-item {
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 8px;
+    .scell {
+      background: rgba(255, 255, 255, 0.55);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 10px;
       padding: 0.85rem 1rem;
     }
-    .result-item .label {
-      font-size: 0.75rem;
-      color: #64748b;
+
+    .sl {
+      font-size: 10px;
+      color: #aaa;
       text-transform: uppercase;
-      letter-spacing: 0.05em;
+      letter-spacing: 0.08em;
       margin-bottom: 4px;
     }
-    .result-item .value {
-      font-size: 1.4rem;
+
+    .sv {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: #111;
+      line-height: 1;
+      margin-bottom: 3px;
+      letter-spacing: -0.03em;
+    }
+
+    .ss {
+      font-size: 11px;
+      color: #aaa;
+    }
+
+    .sbar {
+      height: 3px;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 3px;
+      margin-top: 7px;
+    }
+
+    .sbar-f {
+      height: 3px;
+      border-radius: 3px;
+      background: #111;
+      transition: width 0.5s;
+    }
+
+    /* ATTACK INFO TABLE */
+    .atk-info {
+      background: rgba(220, 38, 38, 0.04);
+      border: 1px solid rgba(220, 38, 38, 0.15);
+      border-radius: 10px;
+      padding: 0.9rem 1.1rem;
+      margin-bottom: 1rem;
+    }
+
+    .atk-title {
+      font-size: 10px;
       font-weight: 700;
-      color: #f1f5f9;
-    }
-    .result-item .sub {
-      font-size: 0.8rem;
-      color: #94a3b8;
-      margin-top: 2px;
+      color: #dc2626;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
     }
 
-    .defence-box {
-      background: #1c1917;
-      border: 1px solid #78350f;
-      border-radius: 8px;
-      padding: 0.85rem 1rem;
+    .atk-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      font-size: 12px;
     }
-    .defence-box .label { font-size: 0.75rem; color: #92400e; text-transform: uppercase; margin-bottom: 6px; }
-    .defence-box .defended-digit { font-size: 1.4rem; font-weight: 700; color: #fbbf24; }
-    .defence-box .defence-method { font-size: 0.8rem; color: #a16207; margin-top: 4px; }
 
-    /* Confidence bar */
-    .conf-bar-wrap { margin-top: 6px; }
-    .conf-bar-bg { background: #1e293b; border-radius: 4px; height: 6px; }
-    .conf-bar-fill { height: 6px; border-radius: 4px; background: #3b82f6; transition: width 0.5s; }
+    .atk-row:last-child {
+      border-bottom: none;
+    }
 
-    /* Loading */
-    .loading { text-align: center; padding: 1.5rem; color: #94a3b8; }
+    .ak {
+      color: #999;
+      flex-shrink: 0;
+    }
 
-    /* Footer */
-    .footer { text-align: center; margin-top: 2rem; color: #475569; font-size: 0.8rem; }
+    .av {
+      color: #111;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    /* SUSPICIOUS INFO BOX */
+    .warn-info {
+      background: rgba(234, 179, 8, 0.06);
+      border: 1px solid rgba(234, 179, 8, 0.25);
+      border-radius: 10px;
+      padding: 0.9rem 1.1rem;
+      margin-bottom: 1rem;
+      font-size: 13px;
+      color: #a16207;
+      line-height: 1.6;
+    }
+
+    .warn-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+      color: #a16207;
+    }
+
+    /* BEFORE / AFTER IMAGES */
+    .img-compare {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      padding: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .img-slot {
+      text-align: center;
+    }
+
+    .img-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .atk-label {
+      color: #dc2626;
+    }
+
+    .def-label {
+      color: #15803d;
+    }
+
+    .cmp-img {
+      display: block;
+      width: 120px;
+      height: 120px;
+      border-radius: 10px;
+      image-rendering: pixelated;
+      border: 2px solid rgba(0, 0, 0, 0.1);
+      margin: 0 auto;
+      background: #000;
+    }
+
+    .img-sublabel {
+      font-size: 10.5px;
+      color: #999;
+      margin-top: 6px;
+    }
+
+    .img-arrow {
+      font-size: 1.75rem;
+      color: #ccc;
+    }
+
+    /* DEFENCE RESULT BOX */
+    .def {
+      border-radius: 10px;
+      padding: 0.85rem 1.1rem;
+    }
+
+    .dl {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 5px;
+      font-weight: 700;
+    }
+
+    .dv {
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+    }
+
+    .dn {
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    /* ERROR */
+    .err {
+      padding: 0.85rem 1.1rem;
+      background: rgba(220, 38, 38, 0.07);
+      border: 1px solid rgba(220, 38, 38, 0.2);
+      border-radius: 10px;
+      color: #dc2626;
+      font-size: 13px;
+    }
+
+    /* TILE */
+    .tile-wrap {
+      max-width: 780px;
+      margin: 1.25rem auto 4rem;
+      padding: 0 2rem;
+    }
+
+    .tile {
+      background: rgba(255, 255, 255, 0.5);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 14px;
+      padding: 1.1rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #111;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: background 0.15s;
+      text-align: center;
+    }
+
+    .tile:hover {
+      background: rgba(255, 255, 255, 0.75);
+    }
+
+    /* POPUP */
+    #popup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 1.5rem;
+    }
+
+    #popup.show {
+      display: flex;
+    }
+
+    @keyframes pop-in {
+      from {
+        opacity: 0;
+        transform: scale(0.88);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes pop-pulse-red {
+
+      0%,
+      100% {
+        border-color: #dc2626;
+      }
+
+      50% {
+        border-color: #fca5a5;
+      }
+    }
+
+    @keyframes pop-pulse-yellow {
+
+      0%,
+      100% {
+        border-color: #ca8a04;
+      }
+
+      50% {
+        border-color: #fde68a;
+      }
+    }
+
+    .popup-card {
+      background: #fff;
+      border: 2px solid #dc2626;
+      border-radius: 20px;
+      padding: 2rem 2rem 1.75rem;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+      animation: pop-in 0.22s ease;
+    }
+
+    .popup-card.pulse-red {
+      animation: pop-in 0.22s ease, pop-pulse-red 1s ease-in-out 0.22s infinite;
+    }
+
+    .popup-card.pulse-yellow {
+      animation: pop-in 0.22s ease, pop-pulse-yellow 1s ease-in-out 0.22s infinite;
+    }
+
+    .popup-ico {
+      font-size: 2.75rem;
+      display: block;
+      margin-bottom: 0.65rem;
+    }
+
+    .popup-title {
+      font-size: 1.1rem;
+      font-weight: 900;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    @keyframes pt-red {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    @keyframes pt-yellow {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .popup-title.blink-red {
+      animation: pt-red 0.85s ease-in-out infinite;
+    }
+
+    .popup-title.blink-yellow {
+      animation: pt-yellow 1.2s ease-in-out infinite;
+    }
+
+    .popup-body {
+      font-size: 0.82rem;
+      color: #666;
+      line-height: 1.65;
+      margin-bottom: 1.25rem;
+    }
+
+    .popup-close {
+      background: #111;
+      color: #fff;
+      border: none;
+      border-radius: 99px;
+      padding: 8px 24px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .popup-close:hover {
+      background: #333;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem;
+      font-size: 11px;
+      color: #ccc;
+    }
+
+    @media(max-width:520px) {
+      .sgrid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero h1 {
+        font-size: 2.5rem;
+      }
+
+      .topbar {
+        gap: 8px;
+      }
+
+      .img-compare {
+        gap: 0.5rem;
+      }
+
+      .cmp-img {
+        width: 90px;
+        height: 90px;
+      }
+    }
   </style>
 </head>
+
 <body>
-<div class="container">
 
-  <!-- Header -->
-  <div class="header">
-    <h1>🛡 AdverSense</h1>
-    <p>AI-Powered Adversarial Attack Detector — Final Year Project</p>
-    <p style="margin-top:4px; font-size:0.8rem; color:#475569;">
-      Upload an MNIST digit image to detect adversarial attacks
-    </p>
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="tb-pill">Introducing AdverSense &#128737;</div>
   </div>
 
-  <!-- Upload card -->
-  <div class="card">
-    <div class="upload-area" onclick="document.getElementById('file-input').click()">
-      <p>📁 Click to upload an image</p>
-      <small>PNG, JPG — MNIST digit (28×28 recommended)</small>
-      <br>
-      <img id="preview" alt="preview">
+  <!-- HERO -->
+  <div class="hero">
+    <h1>Detect. Defend.<br>Stay one step<br>ahead.</h1>
+    <p>Upload any digit image. AdverSense detects adversarial attacks, identifies misclassifications, and recovers the
+      correct answer through preprocessing defence.</p>
+  </div>
+
+  <!-- LAB MODE PANEL -->
+  <div class="card-wrap" style="margin-bottom: 1rem;">
+    <div class="ucard" style="padding: 1.25rem 1.5rem;">
+      <div style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+        <span>&#129514;</span> Lab Mode &mdash; Pre-generated Attacks
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <select id="lab-attack" onchange="loadLabSamples()" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: inherit; font-weight: 600;">
+          <option value="PGD" selected>PGD</option>
+          <option value="FGSM">FGSM</option>
+          <option value="DeepFool">DeepFool</option>
+        </select>
+        <select id="lab-index" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: 'Courier New', monospace; min-width: 240px;">
+          <option value="">Loading samples...</option>
+        </select>
+        <button class="cf-btn" id="lab-btn" onclick="runLabSample()">Run lab sample &rarr;</button>
+      </div>
+      <div style="font-size: 11px; color: #666; margin-top: 0.65rem;">
+        True digit from MNIST label for this generated sample (not guessed from pixels).
+      </div>
     </div>
-    <input type="file" id="file-input" accept="image/*"
-           style="display:none" onchange="handleFile(this)">
-    <button class="btn" onclick="analyse()" id="analyse-btn">
-      Analyse Image
-    </button>
   </div>
 
-  <!-- Result card -->
-  <div class="card" id="result-card">
-    <div id="result-content"></div>
+  <!-- UPLOAD CARD -->
+  <div class="card-wrap">
+    <div class="ucard">
+      <div class="drop-area" id="dz" onclick="document.getElementById('fi').click()" ondragover="ov(event)"
+        ondragleave="ol(event)" ondrop="od(event)">
+        <span class="ico">&#128194;</span>
+        <p class="dt">Drop your image here, or click to browse</p>
+        <p class="ds">PNG &nbsp;&middot;&nbsp; JPG &nbsp;&middot;&nbsp; Any size accepted</p>
+        <div id="pw">
+          <div><img id="pi" alt="preview">
+            <div id="fn"></div>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="fi" accept="image/*" onchange="fs(this)">
+      <div class="card-footer">
+        <div class="cf-left">
+          <div class="cf-icon" onclick="document.getElementById('fi').click()">&#128206;</div>
+          <div class="swatch"></div>
+        </div>
+        <button class="cf-btn" id="btn" onclick="run()">Analyse &rarr;</button>
+      </div>
+    </div>
   </div>
 
-  <div class="footer">
-    AdverSense · AI Security Project · P P Savani University · 2026
+  <!-- RESULT -->
+  <div id="rs"></div>
+
+  
+
+  <!-- POPUP — content set dynamically by JS -->
+  <div id="popup">
+    <div class="popup-card" id="pcard">
+      <span class="popup-ico" id="pico">&#128680;</span>
+      <div class="popup-title" id="ptitle">ADVERSARIAL ATTACK DETECTED</div>
+      <div class="popup-body" id="pbody">The uploaded image contains adversarial noise.</div>
+      <button class="popup-close" onclick="document.getElementById('popup').classList.remove('show')">
+        View Full Result
+      </button>
+    </div>
   </div>
 
-</div>
+  <footer>AdverSense &nbsp;&middot;&nbsp; AI Security Project &nbsp;&middot;&nbsp; P P Savani University
+    &nbsp;&middot;&nbsp; 2026</footer>
 
-<script>
-  let selectedFile = null;
+  <script>
+    var f = null;
 
-  function handleFile(input) {
-    selectedFile = input.files[0];
-    if (!selectedFile) return;
-    const img = document.getElementById('preview');
-    img.src = URL.createObjectURL(selectedFile);
-    img.style.display = 'block';
-  }
-
-  async function analyse() {
-    if (!selectedFile) {
-      alert('Please select an image first.');
-      return;
+    function fs(inp) { f = inp.files[0]; if (f) sp(f); }
+    function ov(e) { e.preventDefault(); document.getElementById('dz').classList.add('over'); }
+    function ol(e) { document.getElementById('dz').classList.remove('over'); }
+    function od(e) {
+      e.preventDefault();
+      document.getElementById('dz').classList.remove('over');
+      var x = e.dataTransfer.files[0];
+      if (x && x.type.indexOf('image') === 0) { f = x; sp(x); }
+    }
+    function sp(x) {
+      var w = document.getElementById('pw');
+      var i = document.getElementById('pi');
+      var n = document.getElementById('fn');
+      i.src = URL.createObjectURL(x);
+      n.textContent = x.name;
+      w.style.display = 'flex';
     }
 
-    const btn = document.getElementById('analyse-btn');
-    const resultCard = document.getElementById('result-card');
-    const resultContent = document.getElementById('result-content');
+    /* ── Lab Mode Sample Selector ── */
+    function loadLabSamples() {
+      var selAtk = document.getElementById('lab-attack');
+      var selIdx = document.getElementById('lab-index');
+      var btn = document.getElementById('lab-btn');
+      if (!selAtk || !selIdx) return;
 
-    btn.disabled = true;
-    btn.textContent = 'Analysing...';
-    resultCard.style.display = 'block';
-    resultContent.innerHTML = '<div class="loading">⏳ Running detection pipeline...</div>';
+      var atk = selAtk.value;
+      selIdx.innerHTML = '<option value="">Loading samples...</option>';
+      selIdx.disabled = true;
+      if (btn) btn.disabled = true;
 
-    const formData = new FormData();
-    formData.append('image', selectedFile);
+      fetch('/lab/samples?attack=' + encodeURIComponent(atk))
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          selIdx.innerHTML = '';
+          if (data.samples && data.samples.length > 0) {
+            data.samples.forEach(function (s) {
+              var opt = document.createElement('option');
+              opt.value = s.index;
+              opt.textContent = 'idx ' + s.index + ' \u00b7 true ' + s.true + ' \u2192 pred ' + s.adv_pred;
+              selIdx.appendChild(opt);
+            });
+            selIdx.disabled = false;
+            if (btn) btn.disabled = false;
+          } else {
+            var opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = (data.error || 'No samples found on disk');
+            selIdx.appendChild(opt);
+          }
+        })
+        .catch(function () {
+          selIdx.innerHTML = '<option value="">Failed loading samples</option>';
+        });
+    }
 
-    try {
-      const res  = await fetch('/analyse', { method: 'POST', body: formData });
-      const data = await res.json();
+    function runLabSample() {
+      var selAtk = document.getElementById('lab-attack');
+      var selIdx = document.getElementById('lab-index');
+      var btn = document.getElementById('lab-btn');
+      var rs = document.getElementById('rs');
+      if (!selAtk || !selIdx) return;
 
-      if (data.error) {
-        resultContent.innerHTML = `<div class="loading" style="color:#f87171">❌ Error: ${data.error}</div>`;
+      var atk = selAtk.value;
+      var idxVal = selIdx.value;
+      if (idxVal === '' || idxVal === null) {
+        alert('Please select a valid lab sample.');
         return;
       }
 
-      const isAdv = data.is_adversarial;
+      btn.disabled = true;
+      btn.textContent = 'Running...';
+      rs.style.display = 'block';
+      rs.innerHTML = '<div class="loading"><div class="spin"></div>Running lab attack sample analysis...</div>';
 
-      let html = `
-        <div class="verdict ${isAdv ? 'adversarial' : 'clean'}">
-          ${isAdv ? '⚠️ ADVERSARIAL ATTACK DETECTED' : '✅ CLEAN IMAGE — No Attack Detected'}
-        </div>
+      fetch('/lab/analyse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attack: atk, index: parseInt(idxVal, 10) })
+      })
+        .then(function (res) { return res.json(); })
+        .then(function (d) {
+          btn.disabled = false;
+          btn.textContent = 'Run lab sample \u2192';
+          if (d.error) {
+            rs.innerHTML = '<div class="err">' + d.error + '</div>';
+            return;
+          }
+          show(d, rs);
+        })
+        .catch(function (err) {
+          btn.disabled = false;
+          btn.textContent = 'Run lab sample \u2192';
+          rs.innerHTML = '<div class="err">Server error: ' + err.message + '</div>';
+        });
+    }
 
-        <div class="result-grid">
-          <div class="result-item">
-            <div class="label">Predicted Digit</div>
-            <div class="value">${data.original_class}</div>
-            <div class="sub">Original classification</div>
-            <div class="conf-bar-wrap">
-              <div class="conf-bar-bg">
-                <div class="conf-bar-fill" style="width:${data.original_confidence}%"></div>
-              </div>
-            </div>
-          </div>
-          <div class="result-item">
-            <div class="label">Confidence</div>
-            <div class="value">${data.original_confidence}%</div>
-            <div class="sub">Model certainty</div>
-          </div>
-          <div class="result-item">
-            <div class="label">Detection Result</div>
-            <div class="value" style="font-size:1rem; color:${isAdv ? '#f87171' : '#4ade80'}">
-              ${isAdv ? 'Adversarial' : 'Clean'}
-            </div>
-            <div class="sub">DetectorCNN verdict</div>
-          </div>
-          <div class="result-item">
-            <div class="label">Detection Confidence</div>
-            <div class="value">${data.detect_confidence}%</div>
-            <div class="sub">Detector certainty</div>
-          </div>
-        </div>
-      `;
+    window.addEventListener('DOMContentLoaded', function () {
+      loadLabSamples();
+    });
 
-      if (isAdv && data.defended_class !== null) {
-        html += `
-          <div class="defence-box">
-            <div class="label">🛡 After Defence (${data.defence_applied})</div>
-            <div class="defended-digit">
-              Corrected digit: ${data.defended_class}
-              <span style="font-size:1rem; font-weight:400">
-                (${data.defended_confidence}% confidence)
-              </span>
-            </div>
-            <div class="defence-method">
-              Adversarial noise stripped via JPEG compression before classification
-            </div>
-          </div>
-        `;
+    function run() {
+      if (!f) { alert('Please select an image first.'); return; }
+      var btn = document.getElementById('btn');
+      var rs = document.getElementById('rs');
+      btn.disabled = true; btn.textContent = 'Analysing...';
+      rs.style.display = 'block';
+      rs.innerHTML = '<div class="loading"><div class="spin"></div>Running detection pipeline...</div>';
+
+      var fd = new FormData(); fd.append('image', f);
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/analyse', true);
+      xhr.onload = function () {
+        btn.disabled = false; btn.textContent = 'Analyse \u2192';
+        if (xhr.status === 200) {
+          try {
+            var d = JSON.parse(xhr.responseText);
+            if (d.error) { rs.innerHTML = '<div class="err">' + d.error + '</div>'; return; }
+            show(d, rs);
+          } catch (e) { rs.innerHTML = '<div class="err">Could not read server response.</div>'; }
+        } else {
+          rs.innerHTML = '<div class="err">Server error (' + xhr.status + '). Make sure Flask is running.</div>';
+        }
+      };
+      xhr.onerror = function () {
+        btn.disabled = false; btn.textContent = 'Analyse \u2192';
+        rs.innerHTML = '<div class="err">Cannot reach server. Make sure Flask is running on port 5000.</div>';
+      };
+      xhr.send(fd);
+    }
+
+    function show(d, rs) {
+      var vt = d.verdict_type || (d.is_adversarial ? 'inconclusive' : 'clean');
+
+      /* ── Determine verdict appearance based on 4-state contract ── */
+      var vc, vi, vtxt;
+
+      if (vt === 'clean') {
+        vc = 'verdict v-clean';
+        vi = '&#9989;';
+        vtxt = 'CLEAN &mdash; No adversarial pattern detected';
+
+      } else if (vt === 'not_fooled') {
+        vc = 'verdict v-warn';
+        vi = '&#9888;&#65039;';
+        vtxt = 'Detector flagged this, but the classifier was not fooled.';
+
+      } else if (vt === 'recovered') {
+        vc = 'verdict v-adv blink';
+        vi = '&#9888;&#65039;';
+        vtxt = 'Adversarial attack detected &mdash; digit recovered.';
+
+      } else {
+        // inconclusive and fallback
+        vt = 'inconclusive';
+        vc = 'verdict v-adv blink';
+        vi = '&#9888;&#65039;';
+        vtxt = 'Adversarial attack detected &mdash; defence could not recover the digit.';
       }
 
-      resultContent.innerHTML = html;
+      /* ── Configure popup ── */
+      var pico = document.getElementById('pico');
+      var ptitle = document.getElementById('ptitle');
+      var pbody = document.getElementById('pbody');
+      var pcard = document.getElementById('pcard');
+      var popup = document.getElementById('popup');
+      popup.classList.remove('show');
 
-    } catch (err) {
-      resultContent.innerHTML =
-        `<div class="loading" style="color:#f87171">❌ Server error: ${err.message}</div>`;
-    } finally {
-      btn.disabled = false;
-      btn.textContent = 'Analyse Image';
+      if (vt === 'not_fooled') {
+        pico.textContent = '\u26A0\uFE0F';
+        ptitle.textContent = 'NOT FOOLED';
+        ptitle.className = 'popup-title blink-yellow';
+        pcard.className = 'popup-card pulse-yellow';
+        pcard.style.borderColor = '#ca8a04';
+        ptitle.style.color = '#a16207';
+        pbody.innerHTML = 'Detector flagged this, but the classifier was not fooled.<br>'
+          + 'Model still reads <strong>' + d.original_class + '</strong>.';
+        popup.classList.add('show');
+
+      } else if (vt === 'recovered') {
+        pico.textContent = '\uD83D\uDEA8';
+        ptitle.textContent = 'ATTACK DETECTED \u2014 DIGIT RECOVERED';
+        ptitle.className = 'popup-title blink-red';
+        pcard.className = 'popup-card pulse-red';
+        pcard.style.borderColor = '#dc2626';
+        ptitle.style.color = '#dc2626';
+        var rBody = 'Attack changed the prediction to look like <strong>' + d.original_class + '</strong>; defence recovered <strong>' + d.defended_class + '</strong>.';
+        if (d.true_label !== null && d.true_label !== undefined) {
+          rBody += '<br>True digit: <strong>' + d.true_label + '</strong>.';
+        }
+        pbody.innerHTML = rBody;
+        popup.classList.add('show');
+
+      } else if (vt === 'inconclusive') {
+        pico.textContent = '\uD83D\uDEA8';
+        ptitle.textContent = 'ATTACK DETECTED \u2014 DIGIT NOT RECOVERED';
+        ptitle.className = 'popup-title blink-red';
+        pcard.className = 'popup-card pulse-red';
+        pcard.style.borderColor = '#dc2626';
+        ptitle.style.color = '#dc2626';
+        var srcLabel = (d.source === 'lab') ? 'from dataset' : 'from filename';
+        var incBody = 'Adversarial attack detected.<br>Model still says <strong>' + d.original_class + '</strong>. ';
+        if (d.true_label !== null && d.true_label !== undefined) {
+          incBody += 'True digit (' + srcLabel + '): <strong>' + d.true_label + '</strong>.';
+        } else {
+          incBody += 'True digit unknown.';
+        }
+        incBody += '<br>Defence could not recover the digit.';
+        pbody.innerHTML = incBody;
+        popup.classList.add('show');
+      }
+
+      /* ── Build result card ── */
+      var h = '<div class="rcard">';
+
+      // Verdict banner
+      h += '<div class="' + vc + '">' + vi + ' <span class="vt">' + vtxt + '</span></div>';
+
+      // Stat grid (No confidence percentages or bars)
+      var headlineDigit = (vt === 'recovered' && d.defended_class !== null) ? d.defended_class : d.original_class;
+      var headlineSub = (vt === 'recovered') ? 'Recovered digit' : 'Original classification';
+
+      var detText, detColor;
+      if (vt === 'clean') {
+        detText = 'Clean';
+        detColor = '#15803d';
+      } else if (vt === 'not_fooled') {
+        detText = 'Flagged, not fooled';
+        detColor = '#a16207';
+      } else {
+        detText = 'Adversarial';
+        detColor = '#dc2626';
+      }
+
+      h += '<div class="sgrid">';
+      h += '<div class="scell"><div class="sl">Predicted Digit</div><div class="sv">' + headlineDigit + '</div><div class="ss">' + headlineSub + '</div></div>';
+      h += '<div class="scell"><div class="sl">Detection Result</div><div class="sv" style="font-size:1rem;color:' + detColor + '">' + detText + '</div><div class="ss">DetectorCNN verdict</div></div>';
+      h += '</div>';
+
+      // Render Attack analysis and Before/After images for not_fooled, recovered, and inconclusive
+      if (vt !== 'clean') {
+        // Attack analysis table (always shown when verdict is not clean)
+        h += '<div class="atk-info">';
+        h += '<div class="atk-title">&#128269; Attack Analysis</div>';
+        h += row('Attack Type', d.attack_type || 'Unknown (no attack metadata)');
+        if (d.true_label !== null && d.true_label !== undefined) {
+          h += row('True Digit', d.true_label);
+        }
+        h += row('Defence Applied', d.defence_applied || '\u2014');
+        h += row('Recovery Outcome', d.recovery_rate || '\u2014');
+        h += '</div>';
+
+        // Before / after images (hidden ONLY when verdict is clean)
+        if (d.original_image && d.defended_image) {
+          h += '<div class="img-compare">';
+          h += '<div class="img-slot">';
+          h += '<div class="img-label atk-label">&#9888;&#65039; Before Defence</div>';
+          h += '<img class="cmp-img" src="data:image/png;base64,' + d.original_image + '" alt="before">';
+          h += '<div class="img-sublabel">Digit ' + d.original_class + '</div>';
+          h += '</div>';
+          h += '<div class="img-arrow">&rarr;</div>';
+          h += '<div class="img-slot">';
+          h += '<div class="img-label def-label">&#128737; After Defence</div>';
+          h += '<img class="cmp-img" src="data:image/png;base64,' + d.defended_image + '" alt="defended">';
+          h += '<div class="img-sublabel">Digit ' + (d.defended_class !== null ? d.defended_class : d.original_class) + '</div>';
+          h += '</div>';
+          h += '</div>';
+        }
+
+        // Defence result box
+        if (vt === 'recovered') {
+          h += '<div class="def" style="background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.3)">';
+          h += '<div class="dl" style="color:#15803d">&#128737; Defence Successful &mdash; Digit Recovered</div>';
+          h += '<div class="dv" style="color:#14532d">Post-defence prediction: ' + d.defended_class + '</div>';
+          h += '<div class="dn" style="color:#166534">' + (d.recovery_rate || d.defence_applied) + '</div>';
+          h += '</div>';
+        } else if (vt === 'not_fooled') {
+          h += '<div class="def" style="background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25)">';
+          h += '<div class="dl" style="color:#a16207">&#9888;&#65039; Classifier Not Fooled</div>';
+          h += '<div class="dv" style="color:#854d0e">Post-defence prediction: ' + d.original_class + '</div>';
+          h += '<div class="dn" style="color:#a16207">' + (d.recovery_rate || d.defence_applied) + '</div>';
+          h += '</div>';
+        } else {
+          // inconclusive
+          var srcLabel = (d.source === 'lab') ? 'from dataset' : 'from filename';
+          var incNote = 'Model still says ' + d.original_class + '. '
+            + (d.true_label !== null && d.true_label !== undefined
+                ? 'True digit (' + srcLabel + '): ' + d.true_label + '.'
+                : 'True digit unknown.');
+          h += '<div class="def" style="background:rgba(220,38,38,0.06);border:1px solid rgba(220,38,38,0.25)">';
+          h += '<div class="dl" style="color:#dc2626">&#9888;&#65039; Defence Applied &mdash; Digit Not Recovered</div>';
+          h += '<div class="dv" style="color:#991b1b">' + incNote + '</div>';
+          h += '<div class="dn" style="color:#b91c1c">' + (d.recovery_rate || d.defence_applied) + '</div>';
+          h += '</div>';
+        }
+      }
+
+      h += '</div>';
+      rs.innerHTML = h;
     }
-  }
-</script>
+
+    function row(k, v) {
+      return '<div class="atk-row"><span class="ak">' + k + '</span><span class="av">' + v + '</span></div>';
+    }
+  </script>
 </body>
+
 </html>
