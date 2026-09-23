@@ -12,23 +12,29 @@ import os
 import json
 import glob
 
-from train_classifier import VictimCNN
-from train_detector import DetectorCNN
+from pipeline import (
+    victim_standard,
+    victim_robust,
+    victim,
+    detector,
+    mnist_test,
+    NORMALISE,
+    MNIST_CLASSES,
+    device,
+    tensor_to_base64,
+    jpeg_defence,
+    gaussian_defence,
+    median_defence,
+    bit_depth_defence,
+    test_defences,
+    classify,
+    detect,
+    estimate_noise,
+    format_pretty_attack,
+    assess_input_quality,
+)
 
 app = Flask(__name__)
-device = torch.device('cpu')
-
-# ── Load both models at startup ───────────────────────────────────────
-victim = VictimCNN().to(device)
-victim.load_state_dict(torch.load('models/victim_cnn.pth', map_location=device))
-victim.eval()
-
-detector = DetectorCNN().to(device)
-detector.load_state_dict(torch.load('models/detector_cnn.pth', map_location=device))
-detector.eval()
-
-NORMALISE    = transforms.Normalize((0.1307,), (0.3081,))
-MNIST_CLASSES = ['0','1','2','3','4','5','6','7','8','9']
 
 
 # ── Preprocessing ─────────────────────────────────────────────────────
@@ -83,117 +89,7 @@ def preprocess_image(file_bytes, return_meta=False):
     return tensor
 
 
-def tensor_to_base64(tensor):
-    """Convert [1,1,28,28] tensor → base64 PNG string for the UI."""
-    img_np = np.clip(tensor.squeeze().cpu().detach().numpy(), 0.0, 1.0)
-    img_np = (img_np * 255).astype(np.uint8)
-    pil    = Image.fromarray(img_np, mode='L').resize((140, 140), Image.NEAREST)
-    buf    = io.BytesIO()
-    pil.save(buf, format='PNG')
-    return base64.b64encode(buf.getvalue()).decode('utf-8')
 
-
-# ── Defence functions ─────────────────────────────────────────────────
-def jpeg_defence(tensor_img, quality=50):
-    """JPEG compression — strips high-frequency adversarial noise."""
-    img_np  = (tensor_img.squeeze().cpu().detach().numpy() * 255).astype(np.uint8)
-    pil_img = Image.fromarray(img_np, mode='L')
-    buf     = io.BytesIO()
-    pil_img.save(buf, format='JPEG', quality=quality)
-    buf.seek(0)
-    compressed = Image.open(buf).convert('L')
-    result = transforms.ToTensor()(np.array(compressed))
-    return result.unsqueeze(0)
-
-
-def gaussian_defence(tensor_img, sigma=0.5):
-    """
-    Gaussian blur — suppresses small local adversarial pixel spikes
-    while retaining broad handwritten-digit strokes.
-    Kernel size matches sigma: k = 2 * round(3 * sigma) + 1.
-    """
-    k = 2 * round(3 * sigma) + 1
-    if k % 2 == 0:
-        k += 1
-    k = max(3, k)
-    img_np  = tensor_img.squeeze().cpu().detach().numpy()
-    blurred = cv2.GaussianBlur(img_np, (k, k), sigmaX=sigma, sigmaY=sigma)
-    blurred = np.clip(blurred, 0.0, 1.0)
-    return torch.tensor(blurred).unsqueeze(0).unsqueeze(0).float()
-
-
-def median_defence(tensor_img, ksize=3):
-    img_np   = (tensor_img.squeeze().cpu().detach().numpy() * 255).astype(np.uint8)
-    filtered = cv2.medianBlur(img_np, ksize)
-    result   = filtered.astype(np.float32) / 255.0
-    return torch.tensor(result).unsqueeze(0).unsqueeze(0).float()
-
-
-def bit_depth_defence(tensor_img, bits=4):
-    steps  = 2 ** bits - 1
-    result = torch.round(tensor_img * steps) / steps
-    return result.float()
-
-
-def test_defences(tensor):
-    candidates = [
-        (gaussian_defence(tensor, sigma=0.5),  "Gaussian Smoothing (sigma=0.5)"),
-        (median_defence(tensor, ksize=3),      "Median Filter (3x3)"),
-        (bit_depth_defence(tensor, bits=4),    "Bit-Depth Reduction (4-bit)"),
-        (jpeg_defence(tensor, quality=50),     "JPEG Compression (q=50)"),
-    ]
-    results = []
-    for defended_tensor, defence_name in candidates:
-        predicted_class, confidence = classify(defended_tensor)
-        results.append({
-            'tensor':     defended_tensor,
-            'defence':    defence_name,
-            'prediction': predicted_class,
-            'confidence': confidence,
-        })
-    return results
-
-
-# ── Model helpers ─────────────────────────────────────────────────────
-def classify(tensor):
-    """Run VictimCNN — returns (digit_str, confidence_float)."""
-    norm = NORMALISE(tensor.squeeze(0)).unsqueeze(0).to(device)
-    with torch.no_grad():
-        logits = victim(norm)
-        probs  = F.softmax(logits, dim=1)
-        conf, pred = probs.max(1)
-    return MNIST_CLASSES[pred.item()], round(conf.item() * 100, 1)
-
-
-def detect(tensor):
-    """
-    Run DetectorCNN — returns (is_adversarial_bool, confidence_float).
-    Note: DetectorCNN was trained on unnormalized [0, 1] tensors
-    (ToTensor() without Normalize in train_detector.py), so we do not normalize here.
-    """
-    with torch.no_grad():
-        logits = detector(tensor.to(device))
-        probs  = F.softmax(logits, dim=1)
-        conf, pred = probs.max(1)
-    return pred.item() == 1, round(conf.item() * 100, 1)
-
-
-def estimate_noise(tensor):
-    img_np      = tensor.squeeze().cpu().numpy()
-    clean_proxy = cv2.GaussianBlur(img_np, (3, 3), 0.5)
-    diff        = np.abs(img_np - clean_proxy)
-    noise_pct   = round(float(diff.mean()) * 100, 2)
-    max_noise   = round(float(diff.max())  * 100, 2)
-
-    nonzero = diff[diff > 0.01]
-    if len(nonzero) > 0:
-        uniformity = float(np.std(nonzero) / (np.mean(nonzero) + 1e-8))
-    else:
-        uniformity = 1.0
-
-    coverage = float((diff > 0.01).mean())
-
-    return noise_pct, max_noise, uniformity, coverage
 
 
 def guess_attack_type(noise_pct, max_noise, uniformity, coverage):
@@ -363,13 +259,52 @@ def lab_samples():
     try:
         with open(index_path, 'r') as f:
             data = json.load(f)
-        # Filter for successful attacks only
-        successful = [item for item in data if item.get('success')]
-        # Return first 50 successful samples
-        samples = successful[:50]
+
+        # 1. 15 clean MNIST samples distributed across range(0, 500, 33)
+        clean_indices = list(range(0, 500, 33))[:15]
+        clean_samples = [
+            {
+                'kind': 'clean',
+                'attack': 'none',
+                'index': i,
+                'true': int(mnist_test[i][1]),
+            }
+            for i in clean_indices
+        ]
+
+        # 2. 15 entries where success == false (resisted)
+        resisted_entries = [item for item in data if not item.get('success')][:15]
+        resisted_samples = [
+            {
+                'kind': 'resisted',
+                'index': item['index'],
+                'true': item['true'],
+                'adv_pred': item.get('adv_pred'),
+                'attack': attack_name,
+            }
+            for item in resisted_entries
+        ]
+
+        # 3. 20 entries where success == true (fooled)
+        fooled_entries = [item for item in data if item.get('success')][:20]
+        fooled_samples = [
+            {
+                'kind': 'fooled',
+                'index': item['index'],
+                'true': item['true'],
+                'adv_pred': item.get('adv_pred'),
+                'attack': attack_name,
+            }
+            for item in fooled_entries
+        ]
+
+        samples = clean_samples + resisted_samples + fooled_samples
+
         return jsonify({
             'attack': attack_name,
-            'total_successful': len(successful),
+            'total_clean': len(clean_samples),
+            'total_resisted': len(resisted_samples),
+            'total_fooled': len(fooled_samples),
             'samples': samples
         })
     except Exception as e:
@@ -379,9 +314,16 @@ def lab_samples():
 @app.route('/lab/analyse', methods=['POST'])
 def lab_analyse():
     req_data = request.get_json(silent=True) or {}
-    attack = req_data.get('attack', 'PGD')
-    idx = req_data.get('index')
+    model_choice = req_data.get('model', 'standard').strip().lower()
 
+    if model_choice == 'robust':
+        if victim_robust is None:
+            return jsonify({'error': 'Robust model checkpoint (models/victim_cnn_at.pth) not available.'}), 400
+        victim_model = victim_robust
+    else:
+        victim_model = victim_standard
+
+    idx = req_data.get('index')
     if idx is None:
         return jsonify({'error': 'Missing sample index'}), 400
 
@@ -390,109 +332,169 @@ def lab_analyse():
     except (ValueError, TypeError):
         return jsonify({'error': 'Invalid index format'}), 400
 
-    norm_map = {'pgd': 'PGD', 'fgsm': 'FGSM', 'deepfool': 'DeepFool'}
-    attack_name = norm_map.get(str(attack).strip().lower(), attack)
+    kind = req_data.get('kind', '').strip().lower()
 
-    adv_pt_path = f'attacks/{attack_name}_adv_images.pt'
-    index_json_path = f'attacks/{attack_name}_index.json'
+    if kind == 'clean':
+        if idx < 0 or idx >= len(mnist_test):
+            return jsonify({'error': f'Index {idx} out of range for MNIST test set'}), 400
+        tensor = mnist_test[idx][0].unsqueeze(0)  # shape [1, 1, 28, 28]
+        true_label = int(mnist_test[idx][1])
+        adv_pred = None
+        attack_type = None
+    else:
+        attack = req_data.get('attack', 'PGD')
+        norm_map = {'pgd': 'PGD', 'fgsm': 'FGSM', 'deepfool': 'DeepFool'}
+        attack_name = norm_map.get(str(attack).strip().lower(), attack)
 
-    if not os.path.exists(adv_pt_path) or not os.path.exists(index_json_path):
-        return jsonify({
-            'error': f'Missing attack data for {attack_name}. Run generate_attacks.py first.'
-        }), 404
+        adv_pt_path = f'attacks/{attack_name}_adv_images.pt'
+        index_json_path = f'attacks/{attack_name}_index.json'
 
-    try:
-        with open(index_json_path, 'r') as f:
-            idx_records = json.load(f)
+        if not os.path.exists(adv_pt_path) or not os.path.exists(index_json_path):
+            return jsonify({
+                'error': f'Missing attack data for {attack_name}. Run generate_attacks.py first.'
+            }), 404
 
-        # Look up by "index" field
-        record = next((r for r in idx_records if r.get('index') == idx), None)
-        if record is None:
-            return jsonify({'error': f'Index {idx} not found in {index_json_path}'}), 404
+        try:
+            with open(index_json_path, 'r') as f:
+                idx_records = json.load(f)
 
-        true_label = record.get('true')
-        adv_pred = record.get('adv_pred')
+            record = next((r for r in idx_records if r.get('index') == idx), None)
+            if record is None:
+                return jsonify({'error': f'Index {idx} not found in {index_json_path}'}), 404
 
-        adv_tensor_all = torch.load(adv_pt_path, map_location='cpu')
-        if idx < 0 or idx >= len(adv_tensor_all):
-            return jsonify({'error': f'Index {idx} out of range in {adv_pt_path}'}), 400
+            if not kind:
+                kind = 'fooled' if record.get('success') else 'resisted'
 
-        tensor = adv_tensor_all[idx].unsqueeze(0)  # shape [1, 1, 28, 28]
-    except Exception as e:
-        return jsonify({'error': f'Could not load lab sample: {str(e)}'}), 500
+            true_label = record.get('true')
+            adv_pred = record.get('adv_pred')
 
-    attack_type = format_pretty_attack(attack_name)
+            adv_tensor_all = torch.load(adv_pt_path, map_location='cpu')
+            if idx < 0 or idx >= len(adv_tensor_all):
+                return jsonify({'error': f'Index {idx} out of range in {adv_pt_path}'}), 400
+
+            tensor = adv_tensor_all[idx].unsqueeze(0)  # shape [1, 1, 28, 28]
+            attack_type = format_pretty_attack(attack_name)
+        except Exception as e:
+            return jsonify({'error': f'Could not load lab sample: {str(e)}'}), 500
 
     # Step 1 — Run detector
     is_adv_det, detect_conf = detect(tensor)
 
-    # Lab sample is guaranteed adversarial attack (never clean)
-    is_adversarial = True
-
-    # Step 2 — Classify original (attacked) image
-    orig_class, orig_conf = classify(tensor)
+    # Step 2 — Classify with selected model
+    orig_class, orig_conf = classify(tensor, victim_model=victim_model)
 
     # Step 3 — Base64 of original for UI display
     orig_b64 = tensor_to_base64(tensor)
 
-    # Step 4 — Estimate noise
-    noise_pct, max_noise, uniformity, coverage = estimate_noise(tensor)
+    detect_false_positive = False
 
-    # Step 5 — Run mild defence methods
-    defence_results = test_defences(tensor)
+    if kind == 'clean':
+        is_adversarial = False
+        verdict_type = "clean"
+        if is_adv_det:
+            detect_false_positive = True
+            recovery_rate = "Detector false positive — sample is clean MNIST digit; no attack occurred."
+        else:
+            recovery_rate = "Clean image — no defence needed"
 
-    # Count votes across the 4 mild defences
-    vote_counts = {}
-    for r in defence_results:
-        c = r['prediction']
-        vote_counts[c] = vote_counts.get(c, 0) + 1
+        defended_class = None
+        defended_conf = None
+        defence_applied = None
+        defended_b64 = None
+        noise_pct = None
+        max_noise = None
+        defence_results = []
 
-    defended_majority = None
-    for c, count in vote_counts.items():
-        if count >= 3:
-            defended_majority = c
-            break
+    elif kind == 'resisted':
+        is_adversarial = is_adv_det
+        noise_pct, max_noise, _, _ = estimate_noise(tensor)
+        defence_results = test_defences(tensor, victim_model=victim_model)
 
-    # Only not_fooled | recovered | inconclusive
-    if orig_class == str(true_label):
-        verdict_type = "not_fooled"
-        best = next((r for r in defence_results if r['prediction'] == orig_class), defence_results[0])
-        defended_class = orig_class
-        defended_conf = best['confidence']
-        defence_applied = best['defence']
-        defended_tensor = best['tensor']
-        defended_b64 = tensor_to_base64(defended_tensor)
-        recovery_rate = (
-            f"Not fooled — original prediction {orig_class} confirmed "
-            f"(ground truth label: {true_label})"
-        )
-    elif defended_majority == str(true_label):
-        verdict_type = "recovered"
-        best = next((r for r in defence_results if r['prediction'] == str(true_label)), defence_results[0])
-        defended_class = str(true_label)
-        defended_conf = best['confidence']
-        defence_applied = best['defence']
-        defended_tensor = best['tensor']
-        defended_b64 = tensor_to_base64(defended_tensor)
-        recovery_rate = (
-            f"Recovered — defence consensus identified true digit {true_label} "
-            f"(attack predicted {orig_class})"
-        )
+        if orig_class == str(true_label):
+            verdict_type = "not_fooled"
+            best = next((r for r in defence_results if r['prediction'] == orig_class), defence_results[0])
+            defended_class = orig_class
+            defended_conf = best['confidence']
+            defence_applied = best['defence']
+            defended_tensor = best['tensor']
+            defended_b64 = tensor_to_base64(defended_tensor)
+            recovery_rate = (
+                f"Not fooled — original prediction {orig_class} confirmed "
+                f"(ground truth label: {true_label})"
+            )
+        else:
+            best = next((r for r in defence_results if r['prediction'] == str(true_label)), None)
+            if best is not None:
+                verdict_type = "recovered"
+                defended_class = str(true_label)
+                defended_conf = best['confidence']
+                defence_applied = best['defence']
+                defended_tensor = best['tensor']
+                defended_b64 = tensor_to_base64(defended_tensor)
+                recovery_rate = (
+                    f"Recovered — {defence_applied} identified true digit {true_label} "
+                    f"(attack predicted {orig_class})"
+                )
+            else:
+                verdict_type = "inconclusive"
+                fallback = next((r for r in defence_results if r['prediction'] == orig_class), defence_results[0])
+                defended_class = orig_class
+                defended_conf = fallback['confidence']
+                defence_applied = fallback['defence']
+                defended_tensor = fallback['tensor']
+                defended_b64 = tensor_to_base64(defended_tensor)
+                recovery_rate = (
+                    f"Inconclusive — model predicted {orig_class}, "
+                    f"true digit (from dataset): {true_label}, defence could not recover"
+                )
+
     else:
-        verdict_type = "inconclusive"
-        best = next((r for r in defence_results if r['prediction'] == orig_class), defence_results[0])
-        defended_class = orig_class
-        defended_conf = best['confidence']
-        defence_applied = best['defence']
-        defended_tensor = best['tensor']
-        defended_b64 = tensor_to_base64(defended_tensor)
-        recovery_rate = (
-            f"Inconclusive — model predicted {orig_class}, "
-            f"true digit (from dataset): {true_label}, defence could not recover"
-        )
+        # kind == 'fooled'
+        is_adversarial = True
+        noise_pct, max_noise, _, _ = estimate_noise(tensor)
+        defence_results = test_defences(tensor, victim_model=victim_model)
+
+        if orig_class == str(true_label):
+            verdict_type = "recovered"
+            best = next((r for r in defence_results if r['prediction'] == str(true_label)), defence_results[0])
+            defended_class = str(true_label)
+            defended_conf = orig_conf
+            defence_applied = "Adversarial Training (Robust Model)"
+            defended_tensor = tensor
+            defended_b64 = orig_b64
+            recovery_rate = (
+                f"Recovered — robust model identified true digit {true_label} "
+                f"(attack fooled standard model into {adv_pred})"
+            )
+        else:
+            best = next((r for r in defence_results if r['prediction'] == str(true_label)), None)
+            if best is not None:
+                verdict_type = "recovered"
+                defended_class = str(true_label)
+                defended_conf = best['confidence']
+                defence_applied = best['defence']
+                defended_tensor = best['tensor']
+                defended_b64 = tensor_to_base64(defended_tensor)
+                recovery_rate = (
+                    f"Recovered — {defence_applied} identified true digit {true_label} "
+                    f"(attack predicted {orig_class})"
+                )
+            else:
+                verdict_type = "inconclusive"
+                fallback = next((r for r in defence_results if r['prediction'] == orig_class), defence_results[0])
+                defended_class = orig_class
+                defended_conf = fallback['confidence']
+                defence_applied = fallback['defence']
+                defended_tensor = fallback['tensor']
+                defended_b64 = tensor_to_base64(defended_tensor)
+                recovery_rate = (
+                    f"Inconclusive — model predicted {orig_class}, "
+                    f"true digit (from dataset): {true_label}, defence could not recover"
+                )
 
     debug_data = {
         'source': 'lab',
+        'kind': kind,
         'sample_index': idx,
         'orig_class': orig_class,
         'orig_conf': orig_conf,
@@ -512,10 +514,11 @@ def lab_analyse():
 
     return jsonify({
         'source':              'lab',
-        'is_adversarial':      True,
+        'is_adversarial':      is_adversarial,
         'verdict':             verdict_type,
         'verdict_type':        verdict_type,
         'detect_confidence':   detect_conf,
+        'detect_false_positive': detect_false_positive,
         'original_class':      orig_class,
         'original_confidence': orig_conf,
         'original_image':      orig_b64,

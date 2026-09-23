@@ -11,6 +11,20 @@ from PIL import Image
 from tqdm import tqdm
 import torch.nn.functional as F
 
+import argparse
+
+ATTACK_INDICES = range(0, 500)
+
+parser = argparse.ArgumentParser(description="Generate adversarial attacks on MNIST test images.")
+parser.add_argument('--eval-split', action='store_true', help='Generate attacks on held-out test split (indices 500-1000)')
+args = parser.parse_args()
+
+if args.eval_split:
+    ATTACK_INDICES = range(500, 1000)
+    suffix = "_heldout"
+else:
+    suffix = ""
+
 # ── 1. Device setup ───────────────────────────────────────────────────
 device = torch.device('cpu')  # Foolbox does not support MPS — use CPU
 print(f"Using device: {device}")
@@ -33,9 +47,10 @@ transform = transforms.ToTensor()
 test_data = torchvision.datasets.MNIST(
     './data', train=False, download=False, transform=transform)
 
-images = torch.stack([test_data[i][0] for i in range(500)]).to(device)
-labels = torch.tensor([test_data[i][1] for i in range(500)]).to(device)
-print(f"✅ Loaded {len(images)} test images to attack")
+attack_indices_list = list(ATTACK_INDICES)
+images = torch.stack([test_data[i][0] for i in ATTACK_INDICES]).to(device)
+labels = torch.tensor([test_data[i][1] for i in ATTACK_INDICES]).to(device)
+print(f"✅ Loaded {len(images)} test images to attack (indices {attack_indices_list[0]} to {attack_indices_list[-1]})")
 
 # ── 4. Baseline accuracy check ────────────────────────────────────────
 # Normalise the same way training used
@@ -97,8 +112,9 @@ for attack_name, attack in attacks.items():
 
     # 1. Save bulk adversarial images at epsilon=0.3
     save_tensor = clipped_advs[-1].cpu()
-    torch.save(save_tensor, f'attacks/{attack_name}_adv_images.pt')
-    print(f"  ✅ Saved bulk tensor: attacks/{attack_name}_adv_images.pt")
+    pt_path = f'attacks/{attack_name}_adv_images{suffix}.pt'
+    torch.save(save_tensor, pt_path)
+    print(f"  ✅ Saved bulk tensor: {pt_path}")
 
     # 2. Predict on adversarial images to find successful misclassifications
     adv_norm = torch.stack([NORMALISE(save_tensor[i]) for i in range(len(save_tensor))]).to(device)
@@ -112,12 +128,13 @@ for attack_name, attack in attacks.items():
     index_records = []
 
     for i in range(len(images)):
+        real_idx = int(attack_indices_list[i])
         y = int(labels_cpu[i].item())
         p = int(adv_preds[i].item())
         is_succ = bool(success[-1][i].item() and p != y)
 
         index_records.append({
-            "index": int(i),
+            "index": real_idx,
             "true": y,
             "adv_pred": p,
             "success": is_succ,
@@ -128,8 +145,8 @@ for attack_name, attack in attacks.items():
         if is_succ:
             succ_list.append(i)
             img_np = (save_tensor[i].squeeze().numpy() * 255.0).clip(0, 255).astype(np.uint8)
-            png_name = f"{attack_name}_true{y}_pred{p}_idx{i:03d}.png"
-            json_name = f"{attack_name}_true{y}_pred{p}_idx{i:03d}.json"
+            png_name = f"{attack_name}_true{y}_pred{p}_idx{real_idx:04d}{suffix}.png"
+            json_name = f"{attack_name}_true{y}_pred{p}_idx{real_idx:04d}{suffix}.json"
             png_path = os.path.join('attacks', attack_name, png_name)
             json_path = os.path.join('attacks', attack_name, json_name)
 
@@ -140,47 +157,49 @@ for attack_name, attack in attacks.items():
                     "eps": 0.3,
                     "true": y,
                     "adv_pred": p,
-                    "index": int(i)
+                    "index": real_idx
                 }, jf, indent=2)
 
     # Save index JSON containing full list of attempted samples
-    with open(f'attacks/{attack_name}_index.json', 'w') as f_idx:
+    json_path = f'attacks/{attack_name}_index{suffix}.json'
+    with open(json_path, 'w') as f_idx:
         json.dump(index_records, f_idx, indent=2)
-    print(f"  ✅ Saved {attack_name} index: attacks/{attack_name}_index.json ({len(index_records)} records)")
+    print(f"  ✅ Saved {attack_name} index: {json_path} ({len(index_records)} records)")
 
     successful_samples[attack_name] = succ_list
     print(f"  ✅ Saved {len(succ_list)} tagged PNGs & JSON sidecars to attacks/{attack_name}/")
 
 # ── Save detector training tensor (successful FGSM, PGD, and DeepFool) ──
-detector_tensors = []
-detector_meta = []
+if not args.eval_split:
+    detector_tensors = []
+    detector_meta = []
 
-for atk in ['FGSM', 'PGD', 'DeepFool']:
-    if atk in successful_samples and atk in results:
-        adv_tensor = results[atk]['adv_images'][-1].cpu()
-        adv_norm = torch.stack([NORMALISE(adv_tensor[i]) for i in range(len(adv_tensor))]).to(device)
-        with torch.no_grad():
-            preds = model(adv_norm).argmax(1).cpu()
-        labels_cpu = labels.cpu()
-        for i in successful_samples[atk]:
-            detector_tensors.append(adv_tensor[i])
-            detector_meta.append({
-                "attack": atk,
-                "eps": 0.3,
-                "true": int(labels_cpu[i].item()),
-                "adv_pred": int(preds[i].item()),
-                "index": int(i)
-            })
+    for atk in ['FGSM', 'PGD', 'DeepFool']:
+        if atk in successful_samples and atk in results:
+            adv_tensor = results[atk]['adv_images'][-1].cpu()
+            adv_norm = torch.stack([NORMALISE(adv_tensor[i]) for i in range(len(adv_tensor))]).to(device)
+            with torch.no_grad():
+                preds = model(adv_norm).argmax(1).cpu()
+            labels_cpu = labels.cpu()
+            for i in successful_samples[atk]:
+                detector_tensors.append(adv_tensor[i])
+                detector_meta.append({
+                    "attack": atk,
+                    "eps": 0.3,
+                    "true": int(labels_cpu[i].item()),
+                    "adv_pred": int(preds[i].item()),
+                    "index": int(attack_indices_list[i])
+                })
 
-if detector_tensors:
-    detector_dataset = torch.stack(detector_tensors)
-    torch.save(detector_dataset, 'attacks/detector_adv_success.pt')
-    with open('attacks/detector_adv_meta.json', 'w') as f:
-        json.dump(detector_meta, f, indent=2)
-    print(f"\n✅ Detector training dataset saved to attacks/detector_adv_success.pt ({len(detector_tensors)} samples)")
-    print(f"✅ Detector metadata saved to attacks/detector_adv_meta.json")
-else:
-    print("\n⚠️ WARNING: No successful attacks found to save for detector!")
+    if detector_tensors:
+        detector_dataset = torch.stack(detector_tensors)
+        torch.save(detector_dataset, 'attacks/detector_adv_success.pt')
+        with open('attacks/detector_adv_meta.json', 'w') as f:
+            json.dump(detector_meta, f, indent=2)
+        print(f"\n✅ Detector training dataset saved to attacks/detector_adv_success.pt ({len(detector_tensors)} samples)")
+        print(f"✅ Detector metadata saved to attacks/detector_adv_meta.json")
+    else:
+        print("\n⚠️ WARNING: No successful attacks found to save for detector!")
 
 # Print attempted vs successful summary
 print("\n" + "="*55)
@@ -195,10 +214,6 @@ for name in attacks.keys():
 print("="*55)
 
 # ── 9. VALIDATION — confirm saved attacks actually fool the model ─────
-# This is the critical step that was missing before.
-# We reload each saved file and check that the model is actually fooled.
-# If attacks are predicting the same class for everything, we catch it here.
-
 print("\n" + "="*55)
 print("🔍 VALIDATING SAVED ATTACK FILES")
 print("="*55)
@@ -206,7 +221,7 @@ print("="*55)
 all_valid = True
 
 for attack_name in attacks.keys():
-    path = f'attacks/{attack_name}_adv_images.pt'
+    path = f'attacks/{attack_name}_adv_images{suffix}.pt'
     adv_tensors = torch.load(path)
 
     # Normalise the adversarial images before passing to model
@@ -297,8 +312,9 @@ plt.suptitle('Original vs Adversarial Examples\n'
              '(Images look identical to humans — AI is fooled)',
              fontsize=13, fontweight='bold', y=1.02)
 plt.tight_layout()
-plt.savefig('results/attack_visualisation.png', dpi=120, bbox_inches='tight')
-print("✅ Saved: results/attack_visualisation.png")
+vis_path = f'results/attack_visualisation{suffix}.png'
+plt.savefig(vis_path, dpi=120, bbox_inches='tight')
+print(f"✅ Saved: {vis_path}")
 
 # ── 12. Final summary ─────────────────────────────────────────────────
 print("\n" + "="*55)

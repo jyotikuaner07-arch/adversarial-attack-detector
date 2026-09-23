@@ -774,6 +774,11 @@
         <select id="lab-index" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: 'Courier New', monospace; min-width: 240px;">
           <option value="">Loading samples...</option>
         </select>
+        <label for="lab-model" style="font-size: 13px; font-weight: 600; color: #333;">Victim model:</label>
+        <select id="lab-model" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: inherit; font-weight: 600;">
+          <option value="standard" selected>Standard</option>
+          <option value="robust">Adversarially trained</option>
+        </select>
         <button class="cf-btn" id="lab-btn" onclick="runLabSample()">Run lab sample &rarr;</button>
       </div>
       <div style="font-size: 11px; color: #666; margin-top: 0.65rem;">
@@ -868,7 +873,15 @@
             data.samples.forEach(function (s) {
               var opt = document.createElement('option');
               opt.value = s.index;
-              opt.textContent = 'idx ' + s.index + ' \u00b7 true ' + s.true + ' \u2192 pred ' + s.adv_pred;
+              opt.setAttribute('data-kind', s.kind);
+              opt.setAttribute('data-index', s.index);
+              if (s.kind === 'clean') {
+                opt.textContent = 'clean idx ' + s.index + ' \u00b7 true ' + s.true;
+              } else if (s.kind === 'resisted') {
+                opt.textContent = 'idx ' + s.index + ' \u00b7 true ' + s.true + ' \u2192 pred ' + s.adv_pred + ' (resisted)';
+              } else {
+                opt.textContent = 'idx ' + s.index + ' \u00b7 true ' + s.true + ' \u2192 pred ' + s.adv_pred + ' (fooled)';
+              }
               selIdx.appendChild(opt);
             });
             selIdx.disabled = false;
@@ -888,13 +901,18 @@
     function runLabSample() {
       var selAtk = document.getElementById('lab-attack');
       var selIdx = document.getElementById('lab-index');
+      var selModel = document.getElementById('lab-model');
       var btn = document.getElementById('lab-btn');
       var rs = document.getElementById('rs');
       if (!selAtk || !selIdx) return;
 
       var atk = selAtk.value;
-      var idxVal = selIdx.value;
-      if (idxVal === '' || idxVal === null) {
+      var selectedOpt = selIdx.options[selIdx.selectedIndex];
+      var idxVal = selectedOpt ? selectedOpt.getAttribute('data-index') : selIdx.value;
+      var kindVal = selectedOpt ? selectedOpt.getAttribute('data-kind') : 'fooled';
+      var modelVal = selModel ? selModel.value : 'standard';
+
+      if (idxVal === '' || idxVal === null || idxVal === undefined) {
         alert('Please select a valid lab sample.');
         return;
       }
@@ -907,7 +925,12 @@
       fetch('/lab/analyse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attack: atk, index: parseInt(idxVal, 10) })
+        body: JSON.stringify({
+          attack: atk,
+          index: parseInt(idxVal, 10),
+          model: modelVal,
+          kind: kindVal
+        })
       })
         .then(function (res) { return res.json(); })
         .then(function (d) {
@@ -1052,7 +1075,10 @@
       var headlineSub = (vt === 'recovered') ? 'Recovered digit' : 'Original classification';
 
       var detText, detColor;
-      if (vt === 'clean') {
+      if (d.detect_false_positive) {
+        detText = 'False positive';
+        detColor = '#ca8a04';
+      } else if (vt === 'clean') {
         detText = 'Clean';
         detColor = '#15803d';
       } else if (vt === 'not_fooled') {

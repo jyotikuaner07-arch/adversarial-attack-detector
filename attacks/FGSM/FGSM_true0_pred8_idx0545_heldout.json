@@ -1,0 +1,7 @@
+{
+  "attack": "FGSM",
+  "eps": 0.3,
+  "true": 0,
+  "adv_pred": 8,
+  "index": 545
+}
