@@ -28,7 +28,7 @@
       align-items: center;
       justify-content: center;
       gap: 12px;
-      padding: 2rem 2rem 0;
+      padding: 1.25rem 1rem 0;
       flex-wrap: wrap;
     }
 
@@ -36,8 +36,8 @@
       background: rgba(255, 255, 255, 0.6);
       border: 1px solid rgba(0, 0, 0, 0.1);
       border-radius: 99px;
-      padding: 7px 18px;
-      font-size: 13px;
+      padding: 5px 14px;
+      font-size: 12px;
       color: #333;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
@@ -60,37 +60,194 @@
       background: #333;
     }
 
+    /* VIEW CONTAINERS & SCALE */
+    .view-container {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 0 1rem;
+      width: 100%;
+    }
+
     /* HERO */
     .hero {
       text-align: center;
-      padding: 3.5rem 2rem 2.5rem;
-      max-width: 860px;
+      padding: 1.75rem 1rem 1.25rem;
+      max-width: 640px;
       margin: 0 auto;
     }
 
     .hero h1 {
       font-family: 'Courier New', Courier, monospace;
-      font-size: clamp(2rem, 5vw, 4rem);
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
       font-weight: 900;
-      line-height: 1.0;
+      line-height: 1.15;
       letter-spacing: -0.04em;
       color: #111;
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.75rem;
     }
 
     .hero p {
-      font-size: 0.95rem;
-      color: #777;
-      line-height: 1.7;
-      max-width: 540px;
+      font-size: 0.85rem;
+      color: #666;
+      line-height: 1.55;
+      max-width: 440px;
       margin: 0 auto;
     }
 
-    /* UPLOAD CARD */
+    /* LANDING ENTRY CARDS */
+    .entry-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 1.25rem auto 0;
+      max-width: 640px;
+    }
+
+    .entry-card {
+      padding: 1.4rem 1.25rem;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-align: left;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .entry-card:hover {
+      background: rgba(255, 255, 255, 0.75);
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .entry-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 0.6rem;
+    }
+
+    .entry-ico {
+      font-size: 1.35rem;
+    }
+
+    .entry-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #111;
+      letter-spacing: -0.01em;
+    }
+
+    .entry-desc {
+      font-size: 0.78rem;
+      color: #666;
+      line-height: 1.55;
+      margin-bottom: 1rem;
+      flex-grow: 1;
+    }
+
+    .entry-action {
+      font-size: 11px;
+      font-weight: 700;
+      color: #111;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width: 540px) {
+      .entry-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* BACK LINK */
+    .back-bar {
+      max-width: 640px;
+      margin: 1.25rem auto 0.5rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #444;
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.65);
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      border-radius: 99px;
+      padding: 5px 14px;
+      transition: background 0.15s, color 0.15s;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .back-link:hover {
+      background: #fff;
+      color: #111;
+    }
+
+    /* SUMMARY PANEL */
+    .summary-wrap {
+      max-width: 640px;
+      margin: 1.25rem auto 0;
+      width: 100%;
+    }
+
+    .summary-card {
+      padding: 1.2rem 1.4rem;
+    }
+
+    .summary-heading {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #555;
+      margin-bottom: 0.75rem;
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    .summary-table th {
+      padding: 6px 8px;
+      text-align: left;
+      color: #777;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      white-space: nowrap;
+    }
+
+    .summary-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      color: #222;
+      white-space: nowrap;
+    }
+
+    .summary-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* CARD WRAP & UCARD */
     .card-wrap {
-      max-width: 780px;
-      margin: 2rem auto;
-      padding: 0 2rem;
+      max-width: 640px;
+      margin: 1rem auto;
+      padding: 0;
     }
 
     .ucard {
@@ -104,7 +261,7 @@
     }
 
     .drop-area {
-      padding: 2.5rem 2rem;
+      padding: 1.5rem 1.25rem;
       text-align: center;
       cursor: pointer;
       border-bottom: 1px solid rgba(0, 0, 0, 0.08);
@@ -120,9 +277,9 @@
     }
 
     .drop-area .ico {
-      font-size: 1.9rem;
+      font-size: 1.8rem;
       display: block;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.5rem;
     }
 
     .drop-area .dt {
@@ -223,11 +380,11 @@
     }
 
     /* RESULT AREA */
-    #rs {
+    .results-wrap {
       display: none;
-      max-width: 780px;
-      margin: 0 auto;
-      padding: 0 2rem;
+      max-width: 640px;
+      margin: 1rem auto 2rem;
+      padding: 0;
     }
 
     .loading {
@@ -270,7 +427,7 @@
       padding: 1.5rem;
     }
 
-    /* VERDICT STYLES — 3 types */
+    /* VERDICT STYLES */
     .verdict {
       display: flex;
       align-items: center;
@@ -284,50 +441,32 @@
       letter-spacing: 0.02em;
     }
 
-    /* Clean */
     .v-clean {
       background: rgba(22, 163, 74, 0.07);
       border-color: rgba(22, 163, 74, 0.25);
       color: #15803d;
     }
 
-    /* Adversarial */
     .v-adv {
       background: rgba(220, 38, 38, 0.07);
       border-color: rgba(220, 38, 38, 0.25);
       color: #dc2626;
     }
 
-    /* Suspicious / non-MNIST */
     .v-warn {
       background: rgba(234, 179, 8, 0.07);
       border-color: rgba(234, 179, 8, 0.35);
       color: #a16207;
     }
 
-    /* Emergency blink for adversarial */
     @keyframes em {
-
-      0%,
-      100% {
-        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
-      }
-
-      50% {
-        box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.2);
-      }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+      50% { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.2); }
     }
 
     @keyframes em2 {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: 0.4;
-      }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
 
     .blink {
@@ -432,27 +571,6 @@
       text-align: right;
     }
 
-    /* SUSPICIOUS INFO BOX */
-    .warn-info {
-      background: rgba(234, 179, 8, 0.06);
-      border: 1px solid rgba(234, 179, 8, 0.25);
-      border-radius: 10px;
-      padding: 0.9rem 1.1rem;
-      margin-bottom: 1rem;
-      font-size: 13px;
-      color: #a16207;
-      line-height: 1.6;
-    }
-
-    .warn-title {
-      font-size: 10px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 6px;
-      color: #a16207;
-    }
-
     /* BEFORE / AFTER IMAGES */
     .img-compare {
       display: flex;
@@ -544,32 +662,6 @@
       font-size: 13px;
     }
 
-    /* TILE */
-    .tile-wrap {
-      max-width: 780px;
-      margin: 1.25rem auto 4rem;
-      padding: 0 2rem;
-    }
-
-    .tile {
-      background: rgba(255, 255, 255, 0.5);
-      border: 1px solid rgba(0, 0, 0, 0.1);
-      border-radius: 14px;
-      padding: 1.1rem 1.5rem;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #111;
-      cursor: pointer;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      transition: background 0.15s;
-      text-align: center;
-    }
-
-    .tile:hover {
-      background: rgba(255, 255, 255, 0.75);
-    }
-
     /* POPUP */
     #popup {
       display: none;
@@ -589,39 +681,18 @@
     }
 
     @keyframes pop-in {
-      from {
-        opacity: 0;
-        transform: scale(0.88);
-      }
-
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
+      from { opacity: 0; transform: scale(0.88); }
+      to { opacity: 1; transform: scale(1); }
     }
 
     @keyframes pop-pulse-red {
-
-      0%,
-      100% {
-        border-color: #dc2626;
-      }
-
-      50% {
-        border-color: #fca5a5;
-      }
+      0%, 100% { border-color: #dc2626; }
+      50% { border-color: #fca5a5; }
     }
 
     @keyframes pop-pulse-yellow {
-
-      0%,
-      100% {
-        border-color: #ca8a04;
-      }
-
-      50% {
-        border-color: #fde68a;
-      }
+      0%, 100% { border-color: #ca8a04; }
+      50% { border-color: #fde68a; }
     }
 
     .popup-card {
@@ -658,27 +729,13 @@
     }
 
     @keyframes pt-red {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: 0.4;
-      }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
     }
 
     @keyframes pt-yellow {
-
-      0%,
-      100% {
-        opacity: 1;
-      }
-
-      50% {
-        opacity: 0.6;
-      }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
     }
 
     .popup-title.blink-red {
@@ -725,10 +782,6 @@
         grid-template-columns: 1fr;
       }
 
-      .hero h1 {
-        font-size: 2.5rem;
-      }
-
       .topbar {
         gap: 8px;
       }
@@ -752,70 +805,129 @@
     <div class="tb-pill">Introducing AdverSense &#128737;</div>
   </div>
 
-  <!-- HERO -->
-  <div class="hero">
-    <h1>Detect. Defend.<br>Stay one step<br>ahead.</h1>
-    <p>Upload any digit image. AdverSense detects adversarial attacks, identifies misclassifications, and recovers the
-      correct answer through preprocessing defence.</p>
-  </div>
+  <!-- VIEW 1: LANDING -->
+  <div id="view-landing" class="view-container">
+    <!-- HERO -->
+    <div class="hero">
+      <h1>Detect. Defend.<br>Stay one step ahead.</h1>
+      <p>An adversarial robustness testbed for MNIST digit classifiers. Generate attacks, measure detection, and compare standard against adversarially trained models.</p>
+    </div>
 
-  <!-- LAB MODE PANEL -->
-  <div class="card-wrap" style="margin-bottom: 1rem;">
-    <div class="ucard" style="padding: 1.25rem 1.5rem;">
-      <div style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
-        <span>&#129514;</span> Lab Mode &mdash; Pre-generated Attacks
+    <!-- ENTRY CARDS -->
+    <div class="entry-grid">
+      <div class="entry-card ucard" onclick="showView('lab')">
+        <div class="entry-header">
+          <span class="entry-ico">&#129514;</span>
+          <span class="entry-title">Lab Mode</span>
+        </div>
+        <p class="entry-desc">Run pre-generated attacks against known MNIST samples. Measures detection and recovery against ground truth.</p>
+        <div class="entry-action">Open Lab &rarr;</div>
       </div>
-      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <select id="lab-attack" onchange="loadLabSamples()" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: inherit; font-weight: 600;">
-          <option value="PGD" selected>PGD</option>
-          <option value="FGSM">FGSM</option>
-          <option value="DeepFool">DeepFool</option>
-        </select>
-        <select id="lab-index" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: 'Courier New', monospace; min-width: 240px;">
-          <option value="">Loading samples...</option>
-        </select>
-        <label for="lab-model" style="font-size: 13px; font-weight: 600; color: #333;">Victim model:</label>
-        <select id="lab-model" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: inherit; font-weight: 600;">
-          <option value="standard" selected>Standard</option>
-          <option value="robust">Adversarially trained</option>
-        </select>
-        <button class="cf-btn" id="lab-btn" onclick="runLabSample()">Run lab sample &rarr;</button>
+
+      <div class="entry-card ucard" onclick="showView('upload')">
+        <div class="entry-header">
+          <span class="entry-ico">&#128194;</span>
+          <span class="entry-title">Upload Image</span>
+        </div>
+        <p class="entry-desc">Analyse any image. Classification and adversarial detection run on pixels alone.</p>
+        <div class="entry-action">Open Upload &rarr;</div>
       </div>
-      <div style="font-size: 11px; color: #666; margin-top: 0.65rem;">
-        True digit from MNIST label for this generated sample (not guessed from pixels).
+    </div>
+
+    <!-- SUMMARY PANEL (CHANGE 5) -->
+    <div id="landing-summary" class="summary-wrap" style="display: none;">
+      <div class="summary-card ucard">
+        <div class="summary-heading">Evaluation results &mdash; held-out test indices 500&ndash;999</div>
+        <div style="overflow-x: auto;">
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>Attack</th>
+                <th>Model</th>
+                <th style="text-align: right;">Attack Success Rate</th>
+                <th style="text-align: right;">Detection Rate</th>
+                <th style="text-align: right;">Recovery Rate</th>
+              </tr>
+            </thead>
+            <tbody id="summary-table-body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- UPLOAD CARD -->
-  <div class="card-wrap">
-    <div class="ucard">
-      <div class="drop-area" id="dz" onclick="document.getElementById('fi').click()" ondragover="ov(event)"
-        ondragleave="ol(event)" ondrop="od(event)">
-        <span class="ico">&#128194;</span>
-        <p class="dt">Drop your image here, or click to browse</p>
-        <p class="ds">PNG &nbsp;&middot;&nbsp; JPG &nbsp;&middot;&nbsp; Any size accepted</p>
-        <div id="pw">
-          <div><img id="pi" alt="preview">
-            <div id="fn"></div>
+  <!-- VIEW 2: LAB -->
+  <div id="view-lab" class="view-container" style="display: none;">
+    <div class="back-bar">
+      <a href="#" class="back-link" onclick="showView('landing'); return false;">&larr; Back</a>
+    </div>
+
+    <!-- LAB MODE PANEL -->
+    <div class="card-wrap">
+      <div class="ucard" style="padding: 1.25rem 1.5rem;">
+        <div style="font-size: 13px; font-weight: 700; color: #111; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+          <span>&#129514;</span> Lab Mode &mdash; Pre-generated Attacks
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <select id="lab-attack" onchange="loadLabSamples()" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: inherit; font-weight: 600;">
+            <option value="PGD" selected>PGD</option>
+            <option value="FGSM">FGSM</option>
+            <option value="DeepFool">DeepFool</option>
+          </select>
+          <select id="lab-index" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: 'Courier New', monospace; min-width: 240px;">
+            <option value="">Loading samples...</option>
+          </select>
+          <label for="lab-model" style="font-size: 13px; font-weight: 600; color: #333;">Victim model:</label>
+          <select id="lab-model" style="padding: 7px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; background: #fff; font-family: inherit; font-weight: 600;">
+            <option value="standard" selected>Standard</option>
+            <option value="robust">Adversarially trained</option>
+          </select>
+          <button class="cf-btn" id="lab-btn" onclick="runLabSample()">Run lab sample &rarr;</button>
+        </div>
+        <div style="font-size: 11px; color: #666; margin-top: 0.65rem;">
+          True digit from MNIST label for this generated sample (not guessed from pixels).
+        </div>
+      </div>
+    </div>
+
+    <!-- LAB RESULTS CONTAINER -->
+    <div id="rs-lab" class="results-wrap"></div>
+  </div>
+
+  <!-- VIEW 3: UPLOAD -->
+  <div id="view-upload" class="view-container" style="display: none;">
+    <div class="back-bar">
+      <a href="#" class="back-link" onclick="showView('landing'); return false;">&larr; Back</a>
+    </div>
+
+    <!-- UPLOAD CARD -->
+    <div class="card-wrap">
+      <div class="ucard">
+        <div class="drop-area" id="dz" onclick="document.getElementById('fi').click()" ondragover="ov(event)"
+          ondragleave="ol(event)" ondrop="od(event)">
+          <span class="ico">&#128194;</span>
+          <p class="dt">Drop your image here, or click to browse</p>
+          <p class="ds">PNG &nbsp;&middot;&nbsp; JPG &nbsp;&middot;&nbsp; Any size accepted</p>
+          <div id="pw">
+            <div><img id="pi" alt="preview">
+              <div id="fn"></div>
+            </div>
           </div>
         </div>
-      </div>
-      <input type="file" id="fi" accept="image/*" onchange="fs(this)">
-      <div class="card-footer">
-        <div class="cf-left">
-          <div class="cf-icon" onclick="document.getElementById('fi').click()">&#128206;</div>
-          <div class="swatch"></div>
+        <input type="file" id="fi" accept="image/*" onchange="fs(this)">
+        <div class="card-footer">
+          <div class="cf-left">
+            <div class="cf-icon" onclick="document.getElementById('fi').click()">&#128206;</div>
+            <div class="swatch"></div>
+          </div>
+          <button class="cf-btn" id="btn" onclick="run()">Analyse &rarr;</button>
         </div>
-        <button class="cf-btn" id="btn" onclick="run()">Analyse &rarr;</button>
       </div>
     </div>
+
+    <!-- UPLOAD RESULTS CONTAINER -->
+    <div id="rs-upload" class="results-wrap"></div>
   </div>
-
-  <!-- RESULT -->
-  <div id="rs"></div>
-
-  
 
   <!-- POPUP — content set dynamically by JS -->
   <div id="popup">
@@ -835,6 +947,16 @@
   <script>
     var f = null;
 
+    /* ── Single-page View Switching ── */
+    function showView(name) {
+      var vLanding = document.getElementById('view-landing');
+      var vLab = document.getElementById('view-lab');
+      var vUpload = document.getElementById('view-upload');
+      if (vLanding) vLanding.style.display = (name === 'landing') ? 'block' : 'none';
+      if (vLab) vLab.style.display = (name === 'lab') ? 'block' : 'none';
+      if (vUpload) vUpload.style.display = (name === 'upload') ? 'block' : 'none';
+    }
+
     function fs(inp) { f = inp.files[0]; if (f) sp(f); }
     function ov(e) { e.preventDefault(); document.getElementById('dz').classList.add('over'); }
     function ol(e) { document.getElementById('dz').classList.remove('over'); }
@@ -851,6 +973,47 @@
       i.src = URL.createObjectURL(x);
       n.textContent = x.name;
       w.style.display = 'flex';
+    }
+
+    /* ── Results Summary Panel Loader (CHANGE 5) ── */
+    function loadResultsSummary() {
+      var container = document.getElementById('landing-summary');
+      var tbody = document.getElementById('summary-table-body');
+      if (!container || !tbody) return;
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/results/summary', true);
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          try {
+            var data = JSON.parse(xhr.responseText);
+            if (data.available && data.rows && data.rows.length > 0) {
+              var h = '';
+              data.rows.forEach(function (r) {
+                h += '<tr>';
+                h += '<td style="font-weight:700;">' + r.attack + '</td>';
+                h += '<td style="color:#555;">' + r.model + '</td>';
+                h += '<td style="text-align:right;">' + r.asr + '</td>';
+                h += '<td style="text-align:right;">' + r.detection_rate + '</td>';
+                h += '<td style="text-align:right;">' + r.recovery_rate + '</td>';
+                h += '</tr>';
+              });
+              tbody.innerHTML = h;
+              container.style.display = 'block';
+            } else {
+              container.style.display = 'none';
+            }
+          } catch (e) {
+            container.style.display = 'none';
+          }
+        } else {
+          container.style.display = 'none';
+        }
+      };
+      xhr.onerror = function () {
+        container.style.display = 'none';
+      };
+      xhr.send();
     }
 
     /* ── Lab Mode Sample Selector ── */
@@ -903,8 +1066,8 @@
       var selIdx = document.getElementById('lab-index');
       var selModel = document.getElementById('lab-model');
       var btn = document.getElementById('lab-btn');
-      var rs = document.getElementById('rs');
-      if (!selAtk || !selIdx) return;
+      var rs = document.getElementById('rs-lab');
+      if (!selAtk || !selIdx || !rs) return;
 
       var atk = selAtk.value;
       var selectedOpt = selIdx.options[selIdx.selectedIndex];
@@ -940,6 +1103,7 @@
             rs.innerHTML = '<div class="err">' + d.error + '</div>';
             return;
           }
+          d.selected_model = modelVal;
           show(d, rs);
         })
         .catch(function (err) {
@@ -951,12 +1115,14 @@
 
     window.addEventListener('DOMContentLoaded', function () {
       loadLabSamples();
+      loadResultsSummary();
     });
 
     function run() {
       if (!f) { alert('Please select an image first.'); return; }
       var btn = document.getElementById('btn');
-      var rs = document.getElementById('rs');
+      var rs = document.getElementById('rs-upload');
+      if (!rs) return;
       btn.disabled = true; btn.textContent = 'Analysing...';
       rs.style.display = 'block';
       rs.innerHTML = '<div class="loading"><div class="spin"></div>Running detection pipeline...</div>';
@@ -970,6 +1136,7 @@
           try {
             var d = JSON.parse(xhr.responseText);
             if (d.error) { rs.innerHTML = '<div class="err">' + d.error + '</div>'; return; }
+            d.selected_model = 'standard';
             show(d, rs);
           } catch (e) { rs.innerHTML = '<div class="err">Could not read server response.</div>'; }
         } else {
@@ -985,6 +1152,7 @@
 
     function show(d, rs) {
       var vt = d.verdict_type || (d.is_adversarial ? 'inconclusive' : 'clean');
+      var isRobust = (d.selected_model === 'robust' || d.defence_applied === 'Adversarial Training (Robust Model)');
 
       /* ── Determine verdict appearance based on 4-state contract ── */
       var vc, vi, vtxt;
@@ -1002,7 +1170,11 @@
       } else if (vt === 'recovered') {
         vc = 'verdict v-adv blink';
         vi = '&#9888;&#65039;';
-        vtxt = 'Adversarial attack detected &mdash; digit recovered.';
+        if (isRobust) {
+          vtxt = 'ROBUST MODEL RESISTED THE ATTACK';
+        } else {
+          vtxt = 'Adversarial attack detected &mdash; digit recovered.';
+        }
 
       } else {
         // inconclusive and fallback
@@ -1033,16 +1205,29 @@
 
       } else if (vt === 'recovered') {
         pico.textContent = '\uD83D\uDEA8';
-        ptitle.textContent = 'ATTACK DETECTED \u2014 DIGIT RECOVERED';
-        ptitle.className = 'popup-title blink-red';
-        pcard.className = 'popup-card pulse-red';
-        pcard.style.borderColor = '#dc2626';
-        ptitle.style.color = '#dc2626';
-        var rBody = 'Attack changed the prediction to look like <strong>' + d.original_class + '</strong>; defence recovered <strong>' + d.defended_class + '</strong>.';
-        if (d.true_label !== null && d.true_label !== undefined) {
-          rBody += '<br>True digit: <strong>' + d.true_label + '</strong>.';
+        if (isRobust) {
+          ptitle.textContent = 'ROBUST MODEL RESISTED THE ATTACK';
+          ptitle.className = 'popup-title blink-red';
+          pcard.className = 'popup-card pulse-red';
+          pcard.style.borderColor = '#dc2626';
+          ptitle.style.color = '#dc2626';
+          var rBody = 'Robust model correctly identified digit <strong>' + (d.defended_class || d.original_class) + '</strong> without preprocessing.';
+          if (d.true_label !== null && d.true_label !== undefined) {
+            rBody += '<br>True digit: <strong>' + d.true_label + '</strong>.';
+          }
+          pbody.innerHTML = rBody;
+        } else {
+          ptitle.textContent = 'ATTACK DETECTED \u2014 DIGIT RECOVERED';
+          ptitle.className = 'popup-title blink-red';
+          pcard.className = 'popup-card pulse-red';
+          pcard.style.borderColor = '#dc2626';
+          ptitle.style.color = '#dc2626';
+          var rBody = 'Attack changed the prediction to look like <strong>' + d.original_class + '</strong>; defence recovered <strong>' + d.defended_class + '</strong>.';
+          if (d.true_label !== null && d.true_label !== undefined) {
+            rBody += '<br>True digit: <strong>' + d.true_label + '</strong>.';
+          }
+          pbody.innerHTML = rBody;
         }
-        pbody.innerHTML = rBody;
         popup.classList.add('show');
 
       } else if (vt === 'inconclusive') {
@@ -1072,7 +1257,12 @@
 
       // Stat grid (No confidence percentages or bars)
       var headlineDigit = (vt === 'recovered' && d.defended_class !== null) ? d.defended_class : d.original_class;
-      var headlineSub = (vt === 'recovered') ? 'Recovered digit' : 'Original classification';
+      var headlineSub;
+      if (isRobust && vt === 'recovered') {
+        headlineSub = 'Robust model classification';
+      } else {
+        headlineSub = (vt === 'recovered') ? 'Recovered digit' : 'Original classification';
+      }
 
       var detText, detColor;
       if (d.detect_false_positive) {
@@ -1103,21 +1293,28 @@
         if (d.true_label !== null && d.true_label !== undefined) {
           h += row('True Digit', d.true_label);
         }
-        h += row('Defence Applied', d.defence_applied || '\u2014');
+        if (isRobust) {
+          h += row('Defence', 'Adversarial training (model-level, no preprocessing applied)');
+        } else {
+          h += row('Defence Applied', d.defence_applied || '\u2014');
+        }
         h += row('Recovery Outcome', d.recovery_rate || '\u2014');
         h += '</div>';
 
         // Before / after images (hidden ONLY when verdict is clean)
         if (d.original_image && d.defended_image) {
+          var beforeLabel = isRobust ? '&#9888;&#65039; Input image' : '&#9888;&#65039; Before Defence';
+          var afterLabel = isRobust ? '&#128737; Same input, robust model' : '&#128737; After Defence';
+
           h += '<div class="img-compare">';
           h += '<div class="img-slot">';
-          h += '<div class="img-label atk-label">&#9888;&#65039; Before Defence</div>';
+          h += '<div class="img-label atk-label">' + beforeLabel + '</div>';
           h += '<img class="cmp-img" src="data:image/png;base64,' + d.original_image + '" alt="before">';
           h += '<div class="img-sublabel">Digit ' + d.original_class + '</div>';
           h += '</div>';
           h += '<div class="img-arrow">&rarr;</div>';
           h += '<div class="img-slot">';
-          h += '<div class="img-label def-label">&#128737; After Defence</div>';
+          h += '<div class="img-label def-label">' + afterLabel + '</div>';
           h += '<img class="cmp-img" src="data:image/png;base64,' + d.defended_image + '" alt="defended">';
           h += '<div class="img-sublabel">Digit ' + (d.defended_class !== null ? d.defended_class : d.original_class) + '</div>';
           h += '</div>';
@@ -1126,15 +1323,24 @@
 
         // Defence result box
         if (vt === 'recovered') {
-          h += '<div class="def" style="background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.3)">';
-          h += '<div class="dl" style="color:#15803d">&#128737; Defence Successful &mdash; Digit Recovered</div>';
-          h += '<div class="dv" style="color:#14532d">Post-defence prediction: ' + d.defended_class + '</div>';
-          h += '<div class="dn" style="color:#166534">' + (d.recovery_rate || d.defence_applied) + '</div>';
-          h += '</div>';
+          if (isRobust) {
+            h += '<div class="def" style="background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.3)">';
+            h += '<div class="dl" style="color:#15803d">&#128737; ROBUST MODEL RESISTED THE ATTACK</div>';
+            h += '<div class="dv" style="color:#14532d">Robust model prediction: ' + (d.defended_class !== null ? d.defended_class : d.original_class) + '</div>';
+            h += '<div class="dn" style="color:#166534">Model classified input correctly without preprocessing.</div>';
+            h += '</div>';
+          } else {
+            h += '<div class="def" style="background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.3)">';
+            h += '<div class="dl" style="color:#15803d">&#128737; Defence Successful &mdash; Digit Recovered</div>';
+            h += '<div class="dv" style="color:#14532d">Post-defence prediction: ' + d.defended_class + '</div>';
+            h += '<div class="dn" style="color:#166534">' + (d.recovery_rate || d.defence_applied) + '</div>';
+            h += '</div>';
+          }
         } else if (vt === 'not_fooled') {
           h += '<div class="def" style="background:rgba(234,179,8,0.06);border:1px solid rgba(234,179,8,0.25)">';
           h += '<div class="dl" style="color:#a16207">&#9888;&#65039; Classifier Not Fooled</div>';
-          h += '<div class="dv" style="color:#854d0e">Post-defence prediction: ' + d.original_class + '</div>';
+          var postPredText = isRobust ? ('Robust model prediction: ' + d.original_class) : ('Post-defence prediction: ' + d.original_class);
+          h += '<div class="dv" style="color:#854d0e">' + postPredText + '</div>';
           h += '<div class="dn" style="color:#a16207">' + (d.recovery_rate || d.defence_applied) + '</div>';
           h += '</div>';
         } else {
@@ -1145,7 +1351,8 @@
                 ? 'True digit (' + srcLabel + '): ' + d.true_label + '.'
                 : 'True digit unknown.');
           h += '<div class="def" style="background:rgba(220,38,38,0.06);border:1px solid rgba(220,38,38,0.25)">';
-          h += '<div class="dl" style="color:#dc2626">&#9888;&#65039; Defence Applied &mdash; Digit Not Recovered</div>';
+          var dlTitle = isRobust ? '&#9888;&#65039; Robust Model Fooled &mdash; Digit Not Recovered' : '&#9888;&#65039; Defence Applied &mdash; Digit Not Recovered';
+          h += '<div class="dl" style="color:#dc2626">' + dlTitle + '</div>';
           h += '<div class="dv" style="color:#991b1b">' + incNote + '</div>';
           h += '<div class="dn" style="color:#b91c1c">' + (d.recovery_rate || d.defence_applied) + '</div>';
           h += '</div>';
