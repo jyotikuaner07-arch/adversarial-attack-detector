@@ -243,36 +243,6 @@ def debug():
     })
 
 
-@app.route('/results/summary', methods=['GET'])
-def results_summary():
-    file_path = 'results/lab_eval_table.txt'
-    if not os.path.exists(file_path):
-        return jsonify({'available': False, 'rows': []})
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read()
-
-        rows = []
-        for line in content.splitlines():
-            line_str = line.strip()
-            if not line_str or line_str.startswith('=') or line_str.startswith('-') or line_str.startswith('Attack') or line_str.startswith('Clean') or line_str.startswith('*'):
-                continue
-            parts = line_str.split()
-            if len(parts) >= 8 and parts[0] in ['FGSM', 'PGD', 'DeepFool']:
-                rows.append({
-                    'attack': parts[0],
-                    'model': parts[1],
-                    'n': parts[2],
-                    'asr': parts[3],
-                    'detection_rate': parts[5] if len(parts) >= 8 else parts[4],
-                    'recovery_rate': parts[-1]
-                })
-
-        return jsonify({'available': True, 'rows': rows, 'raw': content})
-    except Exception as e:
-        return jsonify({'available': False, 'error': str(e)}), 500
-
-
 @app.route('/lab/samples', methods=['GET'])
 def lab_samples():
     attack = request.args.get('attack', 'PGD').strip()
