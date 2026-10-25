@@ -1,0 +1,2027 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdverSense</title>
+  <style>
+    :root {
+      --bg: #0B0F14;
+      --card: #111820;
+      --card-hov: #151F29;
+      --text: #F2F5F7;
+      --text-dim: #8D9AA8;
+      --border: #263440;
+      --cyan: #00D9FF;
+      --green: #00E6A0;
+      --warn: #FFB84D;
+      --threat: #FF4D6D;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      cursor: none;
+    }
+
+    /* Subtle technical grid texture */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(38, 52, 64, 0.35) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(38, 52, 64, 0.35) 1px, transparent 1px);
+      background-size: 48px 48px;
+      opacity: 0.32;
+    }
+
+    /* ── CUSTOM CURSOR ── */
+    #cur-dot,
+    #cur-ring {
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 10000;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+    }
+
+    #cur-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--cyan);
+      box-shadow: 0 0 6px rgba(0, 217, 255, 0.85);
+    }
+
+    #cur-ring {
+      width: 26px;
+      height: 26px;
+      border: 1px solid rgba(0, 217, 255, 0.45);
+      box-shadow: 0 0 10px rgba(0, 217, 255, 0.12), inset 0 0 8px rgba(0, 217, 255, 0.06);
+      transition: width 160ms ease, height 160ms ease,
+        border-color 160ms ease, opacity 160ms ease;
+    }
+
+    #cur-ring.hovering {
+      width: 42px;
+      height: 42px;
+      border-color: rgba(0, 217, 255, 0.8);
+    }
+
+    .cur-trail {
+      position: fixed;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--cyan);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      animation: trailFade 420ms ease-out forwards;
+    }
+
+    @keyframes trailFade {
+      from {
+        opacity: 0.45;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      to {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.3);
+      }
+    }
+
+    .cur-pulse {
+      position: fixed;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1.5px solid var(--cyan);
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      animation: pulseOut 300ms ease-out forwards;
+    }
+
+    @keyframes pulseOut {
+      from {
+        opacity: 0.8;
+        transform: translate(-50%, -50%) scale(0.6);
+      }
+
+      to {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(3.4);
+      }
+    }
+
+    /* ── PAGE VIEW NAVIGATION ── */
+    .page-view {
+      display: none;
+      opacity: 0;
+      transform: translateY(8px);
+      position: relative;
+      z-index: 1;
+    }
+
+    #page-landing.entering,
+    #page-landing.active,
+    #page-landing.leaving {
+      display: flex;
+    }
+
+    #page-lab.entering,
+    #page-lab.active,
+    #page-lab.leaving,
+    #page-upload.entering,
+    #page-upload.active,
+    #page-upload.leaving {
+      display: block;
+    }
+
+    .page-view.entering {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    .page-view.active {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 220ms ease, transform 220ms ease;
+    }
+
+    .page-view.leaving {
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 150ms ease, transform 150ms ease;
+    }
+
+    /* ── PAGE 1: LANDING ── */
+    #page-landing {
+      min-height: 100vh;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2.5rem;
+    }
+
+    .landing-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 1100px;
+      gap: 3.5rem;
+    }
+
+    .landing-col-left {
+      width: 48%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .landing-col-right {
+      width: 52%;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .tb-pill {
+      display: inline-block;
+      align-self: flex-start;
+      background: rgba(0, 217, 255, 0.06);
+      border: 1px solid rgba(0, 217, 255, 0.28);
+      border-radius: 99px;
+      padding: 5px 14px;
+      font-size: 12px;
+      color: var(--cyan);
+      letter-spacing: 0.02em;
+      margin-bottom: 1.25rem;
+    }
+
+    .brand-title {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: clamp(1.85rem, 3.2vw, 2.5rem);
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      margin-bottom: 0.85rem;
+      text-align: left;
+    }
+
+    .brand-title .accent {
+      color: var(--cyan);
+    }
+
+    .brand-tagline {
+      font-size: 0.86rem;
+      color: var(--text-dim);
+      line-height: 1.6;
+      margin-bottom: 1.25rem;
+      text-align: left;
+    }
+
+    #hero3d {
+      width: 100%;
+      height: 260px;
+      border-radius: 12px;
+      background: rgba(17, 24, 32, 0.55);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero3d-label {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+      z-index: 2;
+    }
+
+    /* ── ENTRY CARDS ── */
+    .entry-card {
+      padding: 1.5rem 1.6rem;
+      cursor: none;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      transition: transform 160ms ease, box-shadow 160ms ease,
+        background 160ms ease, border-color 160ms ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      text-align: left;
+      user-select: none;
+      -webkit-user-select: none;
+      position: relative;
+    }
+
+    .entry-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 14px;
+      bottom: 14px;
+      width: 2px;
+      border-radius: 2px;
+      background: var(--accent, var(--cyan));
+      opacity: 0.55;
+      transition: opacity 160ms ease;
+    }
+
+    .entry-card:hover {
+      transform: translateY(-2px);
+      background: var(--card-hov);
+      border-color: var(--accent, var(--cyan));
+      box-shadow: 0 0 0 1px rgba(0, 217, 255, 0.05),
+        0 6px 24px rgba(0, 0, 0, 0.45),
+        0 0 22px -8px var(--accent, var(--cyan));
+    }
+
+    .entry-card:hover::before {
+      opacity: 1;
+    }
+
+    .card-lab {
+      --accent: #00E6A0;
+    }
+
+    .card-upload {
+      --accent: #00D9FF;
+    }
+
+    .entry-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 0.6rem;
+    }
+
+    .entry-ico {
+      font-size: 1.2rem;
+    }
+
+    .entry-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+
+    .entry-desc {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      line-height: 1.55;
+      margin-bottom: 1rem;
+    }
+
+    .entry-action {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent, var(--cyan));
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      letter-spacing: 0.04em;
+    }
+
+    .status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9.5px;
+      letter-spacing: 0.1em;
+      color: var(--green);
+      margin-top: 0.75rem;
+      opacity: 0.75;
+    }
+
+    .status-dot span.led {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px rgba(0, 230, 160, 0.9);
+      animation: ledPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes ledPulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.35;
+      }
+    }
+
+    /* ── PAGE 2: MODE VIEW ── */
+    .mode-page-wrap {
+      width: 100%;
+      max-width: 1220px;
+      margin: 0 auto;
+      padding: 2.5rem 2.25rem 3.5rem;
+      min-height: 100vh;
+    }
+
+    .back-bar {
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-dim);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 6px 16px;
+      transition: background 160ms, color 160ms, border-color 160ms;
+      cursor: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .back-link:hover {
+      background: var(--card-hov);
+      color: var(--cyan);
+      border-color: rgba(0, 217, 255, 0.45);
+    }
+
+    .mode-layout {
+      display: flex;
+      width: 100%;
+      align-items: flex-start;
+      position: relative;
+    }
+
+    .mode-panel-box {
+      width: min(680px, 100%);
+      margin-left: max(0px, calc(50% - 340px));
+      transition: width 300ms ease-out, margin-left 300ms ease-out;
+      flex-shrink: 0;
+    }
+
+    .mode-layout.state-b .mode-panel-box {
+      width: calc(42% - 14px);
+      margin-left: 0;
+    }
+
+    .mode-results-box {
+      display: none;
+      width: calc(58% - 14px);
+      margin-left: 28px;
+      opacity: 0;
+      transform: translateY(8px);
+      flex-shrink: 0;
+    }
+
+    .mode-results-box.entering {
+      display: block;
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    .mode-results-box.active {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 250ms ease 100ms, transform 250ms ease 100ms;
+    }
+
+    /* ── CARDS ── */
+    .ucard {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .drop-area {
+      padding: 1.6rem 1.4rem;
+      text-align: center;
+      cursor: none;
+      border-bottom: 1px solid var(--border);
+      transition: background 160ms, border-color 160ms;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .drop-area:hover,
+    .drop-area.over {
+      background: var(--card-hov);
+    }
+
+    .drop-area .ico {
+      font-size: 1.6rem;
+      display: block;
+      margin-bottom: 0.5rem;
+      opacity: 0.85;
+    }
+
+    .drop-area .dt {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.3rem;
+    }
+
+    .drop-area .ds {
+      font-size: 11.5px;
+      color: var(--text-dim);
+    }
+
+    #pw {
+      display: none;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    #pw img {
+      width: 78px;
+      height: 78px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      object-fit: cover;
+      image-rendering: pixelated;
+    }
+
+    #fn {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 5px;
+    }
+
+    input[type=file] {
+      display: none;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.2rem;
+    }
+
+    .cf-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .cf-icon {
+      width: 30px;
+      height: 30px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      cursor: none;
+      transition: background 160ms, border-color 160ms;
+    }
+
+    .cf-icon:hover {
+      background: rgba(0, 217, 255, 0.08);
+      border-color: rgba(0, 217, 255, 0.4);
+    }
+
+    .swatch {
+      width: 20px;
+      height: 20px;
+      background: var(--cyan);
+      border-radius: 5px;
+      opacity: 0.6;
+    }
+
+    .cf-btn {
+      background: var(--cyan);
+      color: #05202B;
+      border: none;
+      border-radius: 99px;
+      padding: 7px 20px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: none;
+      transition: background 160ms, box-shadow 160ms;
+    }
+
+    .cf-btn:hover {
+      background: #38E4FF;
+      box-shadow: 0 0 20px -4px rgba(0, 217, 255, 0.55);
+    }
+
+    .cf-btn:disabled {
+      background: #2A3843;
+      color: var(--text-dim);
+      cursor: none;
+      box-shadow: none;
+    }
+
+    select {
+      background: #0D141B;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      font-weight: 600;
+      cursor: none;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: rgba(0, 217, 255, 0.5);
+    }
+
+    @keyframes resultFadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .rcard {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem;
+      animation: resultFadeUp 0.25s ease forwards;
+    }
+
+    .loading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 1.4rem 1.5rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .spin {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0, 217, 255, 0.15);
+      border-top-color: var(--cyan);
+      border-radius: 50%;
+      animation: sp 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes sp {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── VERDICT ── */
+    .verdict {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-bottom: 1rem;
+      border: 1px solid;
+      letter-spacing: 0.02em;
+    }
+
+    .v-clean {
+      background: rgba(0, 230, 160, 0.07);
+      border-color: rgba(0, 230, 160, 0.35);
+      color: var(--green);
+    }
+
+    .v-adv {
+      background: rgba(255, 77, 109, 0.07);
+      border-color: rgba(255, 77, 109, 0.4);
+      color: var(--threat);
+    }
+
+    .v-warn {
+      background: rgba(255, 184, 77, 0.07);
+      border-color: rgba(255, 184, 77, 0.4);
+      color: var(--warn);
+    }
+
+    @keyframes em {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(255, 77, 109, 0);
+      }
+
+      50% {
+        box-shadow: 0 0 0 4px rgba(255, 77, 109, 0.14);
+      }
+    }
+
+    @keyframes em2 {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.45;
+      }
+    }
+
+    .blink {
+      animation: em 0.9s ease-in-out infinite;
+    }
+
+    .blink .vt {
+      animation: em2 0.9s ease-in-out infinite;
+    }
+
+    /* ── STAT GRID ── */
+    .sgrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+
+    .scell {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+    }
+
+    .sl {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+
+    .sv {
+      font-size: 1.65rem;
+      font-weight: 900;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 3px;
+      letter-spacing: -0.03em;
+    }
+
+    .ss {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* ── ATTACK INFO ── */
+    .atk-info {
+      background: rgba(255, 77, 109, 0.04);
+      border: 1px solid rgba(255, 77, 109, 0.2);
+      border-radius: 10px;
+      padding: 0.9rem 1.1rem;
+      margin-bottom: 1rem;
+    }
+
+    .atk-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--threat);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .atk-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(38, 52, 64, 0.6);
+      font-size: 12px;
+    }
+
+    .atk-row:last-child {
+      border-bottom: none;
+    }
+
+    .ak {
+      color: var(--text-dim);
+      flex-shrink: 0;
+    }
+
+    .av {
+      color: var(--text);
+      font-weight: 700;
+      text-align: right;
+    }
+
+    /* ── BEFORE / AFTER ── */
+    .img-compare {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem;
+      flex-wrap: wrap;
+    }
+
+    .img-slot {
+      text-align: center;
+    }
+
+    .img-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .atk-label {
+      color: var(--threat);
+    }
+
+    .def-label {
+      color: var(--green);
+    }
+
+    .cmp-img {
+      display: block;
+      width: 120px;
+      height: 120px;
+      border-radius: 10px;
+      image-rendering: pixelated;
+      border: 1px solid var(--border);
+      margin: 0 auto;
+      background: #000;
+    }
+
+    .img-sublabel {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+
+    .img-arrow {
+      font-size: 1.5rem;
+      color: var(--border);
+    }
+
+    /* ── DEFENCE BOX ── */
+    .def {
+      border-radius: 10px;
+      padding: 0.85rem 1.1rem;
+    }
+
+    .dl {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 5px;
+      font-weight: 700;
+      color: var(--text-dim);
+    }
+
+    .dv {
+      font-size: 1.2rem;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .dn {
+      font-size: 11px;
+      margin-top: 4px;
+      color: var(--text-dim);
+    }
+
+    /* ── ERROR ── */
+    .err {
+      padding: 0.85rem 1.1rem;
+      background: rgba(255, 77, 109, 0.08);
+      border: 1px solid rgba(255, 77, 109, 0.3);
+      border-radius: 10px;
+      color: var(--threat);
+      font-size: 13px;
+    }
+
+    /* ── POPUP ── */
+    #popup {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      background: rgba(5, 8, 12, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 1.5rem;
+    }
+
+    #popup.show {
+      display: flex;
+    }
+
+    @keyframes pop-in {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @keyframes pop-pulse-red {
+
+      0%,
+      100% {
+        border-color: rgba(255, 77, 109, 0.9);
+      }
+
+      50% {
+        border-color: rgba(255, 77, 109, 0.35);
+      }
+    }
+
+    @keyframes pop-pulse-yellow {
+
+      0%,
+      100% {
+        border-color: rgba(255, 184, 77, 0.9);
+      }
+
+      50% {
+        border-color: rgba(255, 184, 77, 0.35);
+      }
+    }
+
+    .popup-card {
+      background: var(--card);
+      border: 1.5px solid var(--threat);
+      border-radius: 16px;
+      padding: 2rem 2rem 1.75rem;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+      animation: pop-in 0.22s ease;
+    }
+
+    .popup-card.pulse-red {
+      animation: pop-in 0.22s ease, pop-pulse-red 1.1s ease-in-out 0.22s infinite;
+    }
+
+    .popup-card.pulse-yellow {
+      animation: pop-in 0.22s ease, pop-pulse-yellow 1.1s ease-in-out 0.22s infinite;
+    }
+
+    .popup-ico {
+      font-size: 2.4rem;
+      display: block;
+      margin-bottom: 0.65rem;
+    }
+
+    .popup-title {
+      font-size: 1.05rem;
+      font-weight: 900;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.01em;
+    }
+
+    @keyframes pt-red {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.45;
+      }
+    }
+
+    @keyframes pt-yellow {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.6;
+      }
+    }
+
+    .popup-title.blink-red {
+      animation: pt-red 0.9s ease-in-out infinite;
+    }
+
+    .popup-title.blink-yellow {
+      animation: pt-yellow 1.2s ease-in-out infinite;
+    }
+
+    .popup-body {
+      font-size: 0.82rem;
+      color: var(--text-dim);
+      line-height: 1.65;
+      margin-bottom: 1.25rem;
+    }
+
+    .popup-close {
+      background: var(--cyan);
+      color: #05202B;
+      border: none;
+      border-radius: 99px;
+      padding: 8px 24px;
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: none;
+      transition: background 160ms;
+    }
+
+    .popup-close:hover {
+      background: #38E4FF;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      #page-landing {
+        padding: 2.5rem 1.5rem;
+        height: auto;
+        min-height: 100vh;
+        align-items: flex-start;
+      }
+
+      .landing-container {
+        flex-direction: column;
+        gap: 2.25rem;
+        max-width: 100%;
+      }
+
+      .landing-col-left {
+        width: 100%;
+      }
+
+      .landing-col-right {
+        width: 100%;
+      }
+
+      .mode-page-wrap {
+        padding: 1.75rem 1.25rem 2.5rem;
+      }
+
+      .mode-layout {
+        flex-direction: column;
+      }
+
+      .mode-panel-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+      }
+
+      .mode-layout.state-b .mode-panel-box {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
+      .mode-results-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-top: 1.5rem;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .sgrid {
+        grid-template-columns: 1fr;
+      }
+
+      .img-compare {
+        gap: 0.5rem;
+      }
+
+      .cmp-img {
+        width: 90px;
+        height: 90px;
+      }
+    }
+
+    /* Touch devices: restore the native cursor */
+    @media (hover: none),
+    (pointer: coarse) {
+
+      body,
+      .entry-card,
+      .cf-btn,
+      .back-link,
+      .drop-area,
+      .cf-icon,
+      select,
+      .popup-close {
+        cursor: auto;
+      }
+
+      #cur-dot,
+      #cur-ring {
+        display: none;
+      }
+    }
+
+    /* ── REDUCED MOTION ── */
+    @media (prefers-reduced-motion: reduce) {
+
+      *,
+      *::before,
+      *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        transition-delay: 0s !important;
+      }
+
+      .page-view {
+        transition: none !important;
+        transform: none !important;
+      }
+
+      .mode-panel-box {
+        transition: none !important;
+      }
+
+      .mode-results-box {
+        transition: none !important;
+        transform: none !important;
+      }
+
+      .entry-card:hover {
+        transform: none !important;
+      }
+
+      .rcard {
+        animation: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+      }
+
+      .spin,
+      .blink,
+      .blink .vt,
+      .status-dot span.led {
+        animation: none !important;
+      }
+
+      .cur-trail,
+      .cur-pulse {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- CUSTOM CURSOR -->
+  <div id="cur-ring"></div>
+  <div id="cur-dot"></div>
+
+  <!-- PAGE 1: LANDING VIEW -->
+  <div id="page-landing" class="page-view active">
+    <div class="landing-container">
+      <div class="landing-col-left">
+        <div class="tb-pill">Introducing AdverSense &#128737;</div>
+        <h1 class="brand-title">Detect. Defend.<br><span class="accent">Stay one step ahead.</span></h1>
+        <p class="brand-tagline">An adversarial robustness testbed for MNIST digit classifiers. Generate attacks,
+          measure detection, and compare standard against adversarially trained models.</p>
+        <div id="hero3d">
+        </div>
+      </div>
+
+      <div class="landing-col-right">
+        <div class="entry-card card-lab" onclick="goTo('lab')">
+          <div class="entry-header">
+            <span class="entry-ico">&#129514;</span>
+            <span class="entry-title">Lab Mode</span>
+          </div>
+          <p class="entry-desc">Run pre-generated attacks against known MNIST samples. Measures detection and recovery
+            against ground truth.</p>
+          <div class="entry-action">Open Lab &rarr;</div>
+          <div class="status-dot"><span class="led"></span> SYSTEM READY</div>
+        </div>
+
+        <div class="entry-card card-upload" onclick="goTo('upload')">
+          <div class="entry-header">
+            <span class="entry-ico">&#128194;</span>
+            <span class="entry-title">Upload Image</span>
+          </div>
+          <p class="entry-desc">Analyse any image. Classification and adversarial detection run on pixels alone.</p>
+          <div class="entry-action">Open Upload &rarr;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 2: LAB MODE VIEW -->
+  <div id="page-lab" class="page-view">
+    <div class="mode-page-wrap">
+      <div class="back-bar">
+        <button class="back-link" onclick="goTo('landing')">&larr; Back</button>
+      </div>
+
+      <div class="mode-layout state-a" id="layout-lab">
+        <div class="mode-panel-box">
+          <div class="ucard" style="padding: 1.4rem 1.6rem;">
+            <div
+              style="font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 0.75rem; display: flex; align-items: center; gap: 6px;">
+              <span>&#129514;</span> Lab Mode &mdash; Pre-generated Attacks
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <select id="lab-attack" onchange="loadLabSamples()">
+                <option value="PGD" selected>PGD</option>
+                <option value="FGSM">FGSM</option>
+                <option value="DeepFool">DeepFool</option>
+              </select>
+              <select id="lab-index" style="font-family: 'Courier New', monospace; min-width: 220px;">
+                <option value="">Loading samples...</option>
+              </select>
+              <label for="lab-model" style="font-size: 13px; font-weight: 600; color: var(--text-dim);">Victim
+                model:</label>
+              <select id="lab-model">
+                <option value="standard" selected>Standard</option>
+                <option value="robust">Adversarially trained</option>
+              </select>
+              <button class="cf-btn" id="lab-btn" onclick="runLabSample()">Run lab sample &rarr;</button>
+            </div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-top: 0.65rem;">
+              True digit from MNIST label for this generated sample (not guessed from pixels).
+            </div>
+          </div>
+        </div>
+
+        <div class="mode-results-box" id="rs-lab"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE 2: UPLOAD IMAGE VIEW -->
+  <div id="page-upload" class="page-view">
+    <div class="mode-page-wrap">
+      <div class="back-bar">
+        <button class="back-link" onclick="goTo('landing')">&larr; Back</button>
+      </div>
+
+      <div class="mode-layout state-a" id="layout-upload">
+        <div class="mode-panel-box">
+          <div class="ucard">
+            <div class="drop-area" id="dz" onclick="document.getElementById('fi').click()" ondragover="ov(event)"
+              ondragleave="ol(event)" ondrop="od(event)">
+              <span class="ico">&#128194;</span>
+              <p class="dt">Drop your image here, or click to browse</p>
+              <p class="ds">PNG &nbsp;&middot;&nbsp; JPG &nbsp;&middot;&nbsp; Any size accepted</p>
+              <div id="pw">
+                <div><img id="pi" alt="preview">
+                  <div id="fn"></div>
+                </div>
+              </div>
+            </div>
+            <input type="file" id="fi" accept="image/*" onchange="fs(this)">
+            <div class="card-footer">
+              <div class="cf-left">
+                <div class="cf-icon" onclick="document.getElementById('fi').click()">&#128206;</div>
+                <div class="swatch"></div>
+              </div>
+              <button class="cf-btn" id="btn" onclick="run()">Analyse &rarr;</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="mode-results-box" id="rs-upload"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- POPUP -->
+  <div id="popup">
+    <div class="popup-card" id="pcard">
+      <span class="popup-ico" id="pico">&#128680;</span>
+      <div class="popup-title" id="ptitle">ADVERSARIAL ATTACK DETECTED</div>
+      <div class="popup-body" id="pbody">The uploaded image contains adversarial noise.</div>
+      <button class="popup-close" onclick="document.getElementById('popup').classList.remove('show')">
+        View Full Result
+      </button>
+    </div>
+  </div>
+
+  <script>
+    var f = null;
+    var currentPage = 'landing';
+    var isNavigating = false;
+
+    /* ── CUSTOM CURSOR ── */
+    (function () {
+      var dot = document.getElementById('cur-dot');
+      var ring = document.getElementById('cur-ring');
+      if (!dot || !ring) return;
+
+      var reduced = window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      var mx = 0, my = 0, rx = 0, ry = 0;
+      var lastTrail = 0;
+
+      document.addEventListener('mousemove', function (e) {
+        mx = e.clientX; my = e.clientY;
+        dot.style.transform = 'translate(' + mx + 'px,' + my + 'px) translate(-50%,-50%)';
+
+        if (!reduced) {
+          var now = Date.now();
+          if (now - lastTrail > 38) {
+            lastTrail = now;
+            var t = document.createElement('div');
+            t.className = 'cur-trail';
+            t.style.left = mx + 'px';
+            t.style.top = my + 'px';
+            document.body.appendChild(t);
+            setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 440);
+          }
+        }
+      });
+
+      function loop() {
+        rx += (mx - rx) * 0.16;
+        ry += (my - ry) * 0.16;
+        ring.style.transform = 'translate(' + rx + 'px,' + ry + 'px) translate(-50%,-50%)';
+        requestAnimationFrame(loop);
+      }
+      loop();
+
+      var SEL = '.entry-card, .cf-btn, .back-link, .drop-area, .cf-icon, select, .popup-close';
+      document.addEventListener('mouseover', function (e) {
+        if (e.target.closest && e.target.closest(SEL)) ring.classList.add('hovering');
+      });
+      document.addEventListener('mouseout', function (e) {
+        if (e.target.closest && e.target.closest(SEL)) ring.classList.remove('hovering');
+      });
+
+      document.addEventListener('mousedown', function (e) {
+        if (reduced) return;
+        var p = document.createElement('div');
+        p.className = 'cur-pulse';
+        p.style.left = e.clientX + 'px';
+        p.style.top = e.clientY + 'px';
+        document.body.appendChild(p);
+        setTimeout(function () { if (p.parentNode) p.parentNode.removeChild(p); }, 320);
+      });
+    })();
+
+    /* ── Page Navigation ── */
+    function goTo(page) {
+      if (page === currentPage || isNavigating) return;
+      isNavigating = true;
+
+      var currentEl = document.getElementById('page-' + currentPage);
+      var targetEl = document.getElementById('page-' + page);
+      if (!targetEl) { isNavigating = false; return; }
+
+      if (page === 'landing') {
+        resetModeState('lab');
+        resetModeState('upload');
+      }
+
+      var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (prefersReduced || !currentEl) {
+        if (currentEl) {
+          currentEl.className = 'page-view';
+          currentEl.style.display = 'none';
+        }
+        targetEl.className = 'page-view active';
+        targetEl.style.display = (page === 'landing') ? 'flex' : 'block';
+        currentPage = page;
+        isNavigating = false;
+        return;
+      }
+
+      currentEl.className = 'page-view leaving';
+      setTimeout(function () {
+        currentEl.className = 'page-view';
+        currentEl.style.display = 'none';
+
+        targetEl.style.display = (page === 'landing') ? 'flex' : 'block';
+        targetEl.className = 'page-view entering';
+        void targetEl.offsetWidth;
+        targetEl.className = 'page-view active';
+        currentPage = page;
+
+        setTimeout(function () { isNavigating = false; }, 220);
+      }, 150);
+    }
+
+    /* ── Reset State A & Clear Results ── */
+    function resetModeState(mode) {
+      var layout = document.getElementById('layout-' + mode);
+      var rs = document.getElementById('rs-' + mode);
+      if (layout) {
+        layout.classList.remove('state-b');
+        layout.classList.add('state-a');
+      }
+      if (rs) {
+        rs.innerHTML = '';
+        rs.className = 'mode-results-box';
+        rs.style.display = 'none';
+      }
+      if (mode === 'upload') {
+        f = null;
+        var fi = document.getElementById('fi');
+        if (fi) fi.value = '';
+        var pw = document.getElementById('pw');
+        if (pw) pw.style.display = 'none';
+        var btn = document.getElementById('btn');
+        if (btn) { btn.disabled = false; btn.textContent = 'Analyse \u2192'; }
+      }
+      if (mode === 'lab') {
+        var labBtn = document.getElementById('lab-btn');
+        if (labBtn) { labBtn.disabled = false; labBtn.textContent = 'Run lab sample \u2192'; }
+      }
+    }
+
+    /* ── Transition State A -> State B ── */
+    function setModeStateB(layoutId, resultsId) {
+      var layout = document.getElementById(layoutId);
+      var rs = document.getElementById(resultsId);
+      if (!layout || !rs) return;
+
+      var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (!layout.classList.contains('state-b')) {
+        if (prefersReduced) {
+          layout.classList.remove('state-a');
+          layout.classList.add('state-b');
+          rs.className = 'mode-results-box active';
+          rs.style.display = 'block';
+          return;
+        }
+
+        rs.style.display = 'block';
+        rs.className = 'mode-results-box entering';
+        void rs.offsetWidth;
+
+        layout.classList.remove('state-a');
+        layout.classList.add('state-b');
+
+        rs.className = 'mode-results-box active';
+      } else {
+        rs.style.display = 'block';
+        rs.className = 'mode-results-box active';
+      }
+    }
+
+    /* ── File Drag & Drop ── */
+    function fs(inp) { f = inp.files[0]; if (f) sp(f); }
+    function ov(e) { e.preventDefault(); document.getElementById('dz').classList.add('over'); }
+    function ol(e) { document.getElementById('dz').classList.remove('over'); }
+    function od(e) {
+      e.preventDefault();
+      document.getElementById('dz').classList.remove('over');
+      var x = e.dataTransfer.files[0];
+      if (x && x.type.indexOf('image') === 0) { f = x; sp(x); }
+    }
+    function sp(x) {
+      var w = document.getElementById('pw');
+      var p = document.getElementById('pi');
+      var n = document.getElementById('fn');
+      var u = URL.createObjectURL(x);
+      p.src = u;
+      n.textContent = x.name + ' (' + (x.size / 1024).toFixed(1) + ' KB)';
+      w.style.display = 'flex';
+    }
+
+    /* ── Lab Mode Sample Selector ── */
+    function loadLabSamples() {
+      var selAtk = document.getElementById('lab-attack');
+      var selIdx = document.getElementById('lab-index');
+      var btn = document.getElementById('lab-btn');
+      if (!selAtk || !selIdx) return;
+
+      var atk = selAtk.value;
+      selIdx.innerHTML = '<option value="">Loading samples...</option>';
+      selIdx.disabled = true;
+      if (btn) btn.disabled = true;
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '/lab/samples?attack=' + encodeURIComponent(atk), true);
+      xhr.onload = function () {
+        if (xhr.status === 200) {
+          try {
+            var data = JSON.parse(xhr.responseText);
+            selIdx.innerHTML = '';
+            if (data.samples && data.samples.length > 0) {
+              data.samples.forEach(function (s) {
+                var opt = document.createElement('option');
+                opt.value = s.index;
+                opt.setAttribute('data-kind', s.kind);
+                opt.setAttribute('data-index', s.index);
+                if (s.kind === 'clean') {
+                  opt.textContent = 'clean idx ' + s.index + ' \u00b7 true ' + s.true;
+                } else if (s.kind === 'resisted') {
+                  opt.textContent = 'idx ' + s.index + ' \u00b7 true ' + s.true + ' \u2192 pred ' + s.adv_pred + ' (resisted)';
+                } else {
+                  opt.textContent = 'idx ' + s.index + ' \u00b7 true ' + s.true + ' \u2192 pred ' + s.adv_pred + ' (fooled)';
+                }
+                selIdx.appendChild(opt);
+              });
+              selIdx.disabled = false;
+              if (btn) btn.disabled = false;
+            } else {
+              var opt = document.createElement('option');
+              opt.value = '';
+              opt.textContent = (data.error || 'No samples found on disk');
+              selIdx.appendChild(opt);
+            }
+          } catch (e) {
+            selIdx.innerHTML = '<option value="">Failed loading samples</option>';
+          }
+        } else {
+          selIdx.innerHTML = '<option value="">Failed loading samples</option>';
+        }
+      };
+      xhr.onerror = function () {
+        selIdx.innerHTML = '<option value="">Failed loading samples</option>';
+      };
+      xhr.send();
+    }
+
+    function runLabSample() {
+      var selAtk = document.getElementById('lab-attack');
+      var selIdx = document.getElementById('lab-index');
+      var selModel = document.getElementById('lab-model');
+      var btn = document.getElementById('lab-btn');
+      var rs = document.getElementById('rs-lab');
+      var layout = document.getElementById('layout-lab');
+      if (!selAtk || !selIdx || !rs) return;
+
+      var atk = selAtk.value;
+      var selectedOpt = selIdx.options[selIdx.selectedIndex];
+      var idxVal = selectedOpt ? selectedOpt.getAttribute('data-index') : selIdx.value;
+      var kindVal = selectedOpt ? selectedOpt.getAttribute('data-kind') : 'fooled';
+      var modelVal = selModel ? selModel.value : 'standard';
+
+      if (idxVal === '' || idxVal === null || idxVal === undefined) {
+        alert('Please select a valid lab sample.');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Running...';
+
+      if (layout && layout.classList.contains('state-b')) {
+        rs.innerHTML = '<div class="loading"><div class="spin"></div>Running lab attack sample analysis...</div>';
+      }
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/lab/analyse', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onload = function () {
+        btn.disabled = false;
+        btn.textContent = 'Run lab sample \u2192';
+        if (xhr.status === 200) {
+          try {
+            var d = JSON.parse(xhr.responseText);
+            setModeStateB('layout-lab', 'rs-lab');
+            if (d.error) {
+              rs.innerHTML = '<div class="err">' + d.error + '</div>';
+              return;
+            }
+            d.selected_model = modelVal;
+            show(d, rs);
+          } catch (e) {
+            setModeStateB('layout-lab', 'rs-lab');
+            rs.innerHTML = '<div class="err">Could not read server response.</div>';
+          }
+        } else {
+          setModeStateB('layout-lab', 'rs-lab');
+          rs.innerHTML = '<div class="err">Server error (' + xhr.status + ').</div>';
+        }
+      };
+      xhr.onerror = function () {
+        btn.disabled = false;
+        btn.textContent = 'Run lab sample \u2192';
+        setModeStateB('layout-lab', 'rs-lab');
+        rs.innerHTML = '<div class="err">Cannot reach server.</div>';
+      };
+      xhr.send(JSON.stringify({
+        attack: atk,
+        index: parseInt(idxVal, 10),
+        model: modelVal,
+        kind: kindVal
+      }));
+    }
+
+    window.addEventListener('DOMContentLoaded', function () {
+      loadLabSamples();
+    });
+
+    function run() {
+      if (!f) { alert('Please select an image first.'); return; }
+      var btn = document.getElementById('btn');
+      var rs = document.getElementById('rs-upload');
+      var layout = document.getElementById('layout-upload');
+      if (!rs) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Analysing...';
+
+      if (layout && layout.classList.contains('state-b')) {
+        rs.innerHTML = '<div class="loading"><div class="spin"></div>Running detection pipeline...</div>';
+      }
+
+      var fd = new FormData();
+      fd.append('image', f);
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/analyse', true);
+      xhr.onload = function () {
+        btn.disabled = false;
+        btn.textContent = 'Analyse \u2192';
+        if (xhr.status === 200) {
+          try {
+            var d = JSON.parse(xhr.responseText);
+            setModeStateB('layout-upload', 'rs-upload');
+            if (d.error) {
+              rs.innerHTML = '<div class="err">' + d.error + '</div>';
+              return;
+            }
+            d.selected_model = 'standard';
+            show(d, rs);
+          } catch (e) {
+            setModeStateB('layout-upload', 'rs-upload');
+            rs.innerHTML = '<div class="err">Could not read server response.</div>';
+          }
+        } else {
+          setModeStateB('layout-upload', 'rs-upload');
+          rs.innerHTML = '<div class="err">Server error (' + xhr.status + '). Make sure Flask is running.</div>';
+        }
+      };
+      xhr.onerror = function () {
+        btn.disabled = false;
+        btn.textContent = 'Analyse \u2192';
+        setModeStateB('layout-upload', 'rs-upload');
+        rs.innerHTML = '<div class="err">Cannot reach server. Make sure Flask is running on port 5000.</div>';
+      };
+      xhr.send(fd);
+    }
+
+    function show(d, rs) {
+      var vt = d.verdict_type || (d.is_adversarial ? 'inconclusive' : 'clean');
+      var isRobust = (d.selected_model === 'robust' || d.defence_applied === 'Adversarial Training (Robust Model)');
+
+      var vc, vi, vtxt;
+
+      if (vt === 'clean') {
+        vc = 'verdict v-clean';
+        vi = '&#9989;';
+        vtxt = 'IMAGE CLEAN &mdash; NO ATTACK DETECTED';
+      } else if (vt === 'not_fooled') {
+        vc = 'verdict v-clean';
+        vi = '&#128737;&#65039;';
+        vtxt = isRobust
+          ? 'ADVERSARIAL ATTACK DETECTED &mdash; MODEL NOT FOOLED'
+          : 'ATTACK DETECTED &mdash; MODEL NOT FOOLED';
+      } else if (vt === 'recovered') {
+        vc = 'verdict v-warn';
+        vi = '&#128737;';
+        vtxt = isRobust
+          ? 'ROBUST MODEL RECOVERED CORRECT DIGIT'
+          : 'ATTACK DETECTED &mdash; DEFENCE RECOVERED DIGIT';
+      } else {
+        vc = 'verdict v-adv blink';
+        vi = '&#128680;';
+        vtxt = 'ADVERSARIAL ATTACK DETECTED &mdash; DEFENCE COULD NOT RECOVER';
+      }
+
+      var h = '<div class="rcard">';
+      h += '<div class="' + vc + '">' + vi + ' <span class="vt">' + vtxt + '</span></div>';
+
+      var headlineDigit = (vt === 'recovered' && d.defended_class !== null) ? d.defended_class : d.original_class;
+      var headlineSub;
+      if (isRobust && vt === 'recovered') {
+        headlineSub = 'Robust model prediction';
+      } else if (vt === 'recovered') {
+        headlineSub = 'Prediction after Defence';
+      } else {
+        headlineSub = 'Model prediction';
+      }
+
+      var detStatus = d.is_adversarial ? 'ATTACK DETECTED' : 'CLEAN';
+      var detSub = d.is_adversarial ? 'Detector flagged sample' : 'Detector passed sample';
+
+      h += '<div class="sgrid">';
+      h += '<div class="scell">';
+      h += '<div class="sl">Classification</div>';
+      h += '<div class="sv">' + (headlineDigit !== undefined && headlineDigit !== null ? headlineDigit : '\u2014') + '</div>';
+      h += '<div class="ss">' + headlineSub + '</div>';
+      h += '</div>';
+
+      h += '<div class="scell">';
+      h += '<div class="sl">Detection Status</div>';
+      h += '<div class="sv" style="font-size:1.15rem;padding-top:4px;">' + detStatus + '</div>';
+      h += '<div class="ss">' + detSub + '</div>';
+      h += '</div>';
+      h += '</div>';
+
+      if (vt !== 'clean') {
+        h += '<div class="atk-info">';
+        h += '<div class="atk-title">&#128269; Attack Analysis</div>';
+        h += row('Attack Type', d.attack_type || 'Not available in Upload Mode (pixel-only)');
+        h += row('Detector Decision', (d.is_adversarial ? 'Adversarial' : 'Clean') + (d.detect_false_positive ? ' (False Positive)' : ''));
+
+        var isAttackSuccess;
+        if (d.true_label !== undefined && d.true_label !== null) {
+          isAttackSuccess = String(d.original_class) !== String(d.true_label);
+        } else if (d.attack_success !== undefined && d.attack_success !== null) {
+          isAttackSuccess = Boolean(d.attack_success);
+        } else {
+          isAttackSuccess = null;
+        }
+        var attackSuccessText;
+        if (isAttackSuccess === true) {
+          attackSuccessText = 'Yes (model was fooled initially)';
+        } else if (isAttackSuccess === false) {
+          attackSuccessText = 'No (model was not fooled)';
+        } else {
+          attackSuccessText = '\u2014';
+        }
+        h += row('Attack Success', attackSuccessText);
+
+        if (d.true_label !== undefined && d.true_label !== null) {
+          h += row('True Class (MNIST label)', d.true_label);
+        }
+        h += row('Original Prediction', d.original_class !== null && d.original_class !== undefined ? d.original_class : '\u2014');
+        h += row('Perturbation Applied', d.max_noise ? d.max_noise + ' max noise (' + (d.noise_pct || 0) + '% pixels perturbed)' : 'None');
+        h += row('Defence Strategy', d.defence_applied || (isRobust ? 'Adversarial Training' : 'Gaussian Filter Defence'));
+
+        var recoveryOutcome;
+        if (vt === 'inconclusive') {
+          var x = (d.defended_class !== null && d.defended_class !== undefined) ? d.defended_class : d.original_class;
+          var y = (d.true_label !== null && d.true_label !== undefined) ? d.true_label : '\u2014';
+          recoveryOutcome = 'Not recovered &mdash; model still predicts ' + x + ', true digit is ' + y;
+        } else {
+          recoveryOutcome = d.recovery_rate || '\u2014';
+        }
+        h += row('Recovery Outcome', recoveryOutcome);
+        h += '</div>';
+
+        if (d.original_image && d.defended_image) {
+          var beforeLabel = isRobust ? '&#9888;&#65039; Input image' : '&#9888;&#65039; Before Defence';
+          var afterLabel = isRobust ? '&#128737; Same input, robust model' : '&#128737; After Defence';
+          var beforeSub = 'Pred: ' + (d.original_class !== null && d.original_class !== undefined ? d.original_class : '?');
+          var afterSub;
+          if (isRobust) {
+            afterSub = 'Pred: ' + (d.defended_class !== null && d.defended_class !== undefined ? d.defended_class : '?') + (vt === 'recovered' ? ' (Correct)' : '');
+          } else {
+            afterSub = 'Pred: ' + (d.defended_class !== null && d.defended_class !== undefined ? d.defended_class : '?') + (vt === 'recovered' ? ' (Recovered)' : '');
+          }
+
+          var origImgSrc = (d.original_image.indexOf('data:') === 0) ? d.original_image : ('data:image/png;base64,' + d.original_image);
+          var defImgSrc = (d.defended_image.indexOf('data:') === 0) ? d.defended_image : ('data:image/png;base64,' + d.defended_image);
+
+          h += '<div class="img-compare">';
+          h += '<div class="img-slot">';
+          h += '<div class="img-label atk-label">' + beforeLabel + '</div>';
+          h += '<img class="cmp-img" src="' + origImgSrc + '" alt="Before defence">';
+          h += '<div class="img-sublabel">' + beforeSub + '</div>';
+          h += '</div>';
+          h += '<div class="img-arrow">&rarr;</div>';
+          h += '<div class="img-slot">';
+          h += '<div class="img-label def-label">' + afterLabel + '</div>';
+          h += '<img class="cmp-img" src="' + defImgSrc + '" alt="After defence">';
+          h += '<div class="img-sublabel">' + afterSub + '</div>';
+          h += '</div>';
+          h += '</div>';
+        }
+      }
+
+      var defTitle, defClass, defSub;
+      if (vt === 'clean') {
+        defTitle = 'Normal inference &mdash; no defence required';
+        defClass = 'Standard model prediction: ' + d.original_class;
+        defSub = 'Sample passed through standard CNN model without intervention.';
+      } else if (vt === 'not_fooled') {
+        if (isRobust) {
+          defTitle = 'Adversarial training &mdash; robust model resisted attack';
+          defClass = 'Model correctly predicted: ' + d.original_class;
+          defSub = 'The adversarially trained model correctly identified the digit despite the perturbation.';
+        } else {
+          defTitle = 'Model resisted attack &mdash; prediction unaltered';
+          defClass = 'Standard model predicted: ' + d.original_class;
+          defSub = 'Perturbation was insufficient to mislead the classifier.';
+        }
+      } else if (vt === 'recovered') {
+        if (isRobust) {
+          defTitle = 'Adversarial training &mdash; robust model recovered true digit';
+          defClass = 'Robust model predicted: ' + d.defended_class;
+          defSub = 'Adversarially trained model was resilient to attack and classified correctly.';
+        } else {
+          defTitle = 'Gaussian filter applied &mdash; recovery successful';
+          defClass = 'Defence recovered class: ' + d.defended_class;
+          defSub = 'Noise smoothed, restoring the classifier prediction to match ground truth.';
+        }
+      } else {
+        defTitle = 'DEFENCE APPLIED &mdash; DIGIT NOT RECOVERED';
+        if (isRobust) {
+          defClass = 'Model fooled &mdash; predicted: ' + (d.defended_class !== null ? d.defended_class : d.original_class);
+          defSub = 'Strong perturbation bypassed adversarial training defences.';
+        } else {
+          defClass = 'Prediction after smoothing: ' + (d.defended_class !== null ? d.defended_class : 'None');
+          defSub = 'Noise reduction did not restore a confident or correct class prediction.';
+        }
+      }
+
+      h += '<div class="def" style="background:rgba(255,255,255,0.025);border:1px solid var(--border);">';
+      h += '<div class="dl">' + defTitle + '</div>';
+      h += '<div class="dv" style="font-size:1.05rem;">' + defClass + '</div>';
+      h += '<div class="dn">' + defSub + '</div>';
+      h += '</div>';
+
+      h += '</div>';
+
+      rs.innerHTML = h;
+
+      if (vt === 'inconclusive' || vt === 'recovered') {
+        var pcard = document.getElementById('pcard');
+        var pico = document.getElementById('pico');
+        var ptitle = document.getElementById('ptitle');
+        var pbody = document.getElementById('pbody');
+        var isFp = d.detect_false_positive;
+
+        var predShown = (d.defended_class !== null && d.defended_class !== undefined) ? d.defended_class : d.original_class;
+        var trueShown = (d.true_label !== null && d.true_label !== undefined) ? d.true_label : null;
+
+        if (isFp) {
+          pcard.className = 'popup-card pulse-yellow';
+          pcard.style.borderColor = '#FFB84D';
+          pico.textContent = '\u26a0\ufe0f';
+          ptitle.className = 'popup-title blink-yellow';
+          ptitle.style.color = '#FFB84D';
+          ptitle.textContent = 'FALSE POSITIVE WARNING';
+          pbody.textContent = 'Detector flagged clean image as adversarial.';
+        } else if (vt === 'recovered') {
+          pcard.className = 'popup-card pulse-red';
+          pcard.style.borderColor = '#FF4D6D';
+          pico.textContent = '\ud83d\udea8';
+          ptitle.className = 'popup-title blink-red';
+          ptitle.style.color = '#FF4D6D';
+          ptitle.textContent = 'ADVERSARIAL ATTACK DETECTED';
+          pbody.textContent = 'Model predicted ' + d.original_class + '.'
+            + (trueShown !== null ? ' Defence recovered the true digit ' + trueShown + '.' : ' Defence recovered the digit ' + predShown + '.');
+        } else {
+          pcard.className = 'popup-card pulse-red';
+          pcard.style.borderColor = '#FF4D6D';
+          pico.textContent = '\ud83d\udea8';
+          ptitle.className = 'popup-title blink-red';
+          ptitle.style.color = '#FF4D6D';
+          ptitle.textContent = 'ADVERSARIAL ATTACK DETECTED';
+          pbody.textContent = 'Model predicted ' + predShown + '.'
+            + (trueShown !== null ? ' True digit is ' + trueShown + '.' : '')
+            + ' Defence could not recover it.';
+        }
+
+        document.getElementById('popup').classList.add('show');
+      }
+    }
+
+    function row(k, v) {
+      return '<div class="atk-row"><span class="ak">' + k + '</span><span class="av">' + v + '</span></div>';
+    }
+  </script>
+
+  <!-- ── 3D HERO VISUALISATION (three.js) ── -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    (function () {
+      var host = document.getElementById('hero3d');
+      if (!host || typeof THREE === 'undefined') return;
+
+      var reduced = window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      var W = host.clientWidth, H = host.clientHeight;
+      if (!W || !H) return;
+
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(38, W / H, 0.1, 1000);
+      camera.position.set(0, 0, 30);
+
+      var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(W, H);
+      host.appendChild(renderer.domElement);
+
+      var G = [
+        "00000000000000",
+        "00000000000000",
+        "00111111111000",
+        "00111111111000",
+        "00000000011000",
+        "00000000110000",
+        "00000001100000",
+        "00000011000000",
+        "00000110000000",
+        "00001100000000",
+        "00011000000000",
+        "00011000000000",
+        "00011000000000",
+        "00000000000000"
+      ];
+
+      var N = 14, SP = 1.15;
+      var cubes = [];
+      var geo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+      var group = new THREE.Group();
+
+      // Dark theme: stroke = soft white, background = dim slate
+      var ON_COLOR = 0xF2F5F7;
+      var OFF_COLOR = 0x263440;
+
+      for (var r = 0; r < N; r++) {
+        for (var c2 = 0; c2 < N; c2++) {
+          var on = G[r][c2] === '1';
+          var mat = new THREE.MeshBasicMaterial({
+            color: on ? ON_COLOR : OFF_COLOR,
+            transparent: true,
+            opacity: on ? 0.92 : 0.38
+          });
+          var m = new THREE.Mesh(geo, mat);
+          m.position.set((c2 - N / 2) * SP, (N / 2 - r) * SP, 0);
+          m.userData = {
+            on: on,
+            base: on ? 0.92 : 0.38,
+            phase: Math.random() * Math.PI * 2
+          };
+          group.add(m);
+          cubes.push(m);
+        }
+      }
+      scene.add(group);
+
+      var t = 0;
+
+      function frame() {
+        requestAnimationFrame(frame);
+        t += 0.016;
+
+        group.rotation.y = Math.sin(t * 0.35) * 0.45;
+        group.rotation.x = Math.sin(t * 0.22) * 0.18;
+
+        var wave = (t * 0.55) % 3.2 - 1.1;
+
+        for (var i = 0; i < cubes.length; i++) {
+          var m = cubes[i];
+          var nx = m.position.x / (N * SP);
+          var d = Math.abs(nx - wave);
+          var hit = Math.max(0, 1 - d * 4);
+
+          m.position.z = hit * 1.6 + Math.sin(t * 2 + m.userData.phase) * 0.06;
+
+          if (hit > 0.02) {
+            m.material.opacity = Math.min(1, m.userData.base + hit * 0.5);
+            if (m.userData.on) {
+              // soft white -> threat red
+              m.material.color.setRGB(
+                0.949 + hit * 0.051,
+                0.960 - hit * 0.658,
+                0.968 - hit * 0.541
+              );
+            } else {
+              // dim slate -> cyan trace
+              m.material.color.setRGB(
+                0.149 - hit * 0.149,
+                0.204 + hit * 0.646,
+                0.251 + hit * 0.749
+              );
+            }
+          } else {
+            m.material.opacity = m.userData.base;
+            m.material.color.setHex(m.userData.on ? ON_COLOR : OFF_COLOR);
+          }
+        }
+
+        renderer.render(scene, camera);
+      }
+
+      if (reduced) {
+        renderer.render(scene, camera);
+      } else {
+        frame();
+      }
+
+      window.addEventListener('resize', function () {
+        var w = host.clientWidth, h = host.clientHeight;
+        if (!w || !h) return;
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      });
+    })();
+  </script>
+
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+{
+  "attack": "DeepFool",
+  "eps": 0.3,
+  "true": 1,
+  "adv_pred": 4,
+  "index": 251
+}
